@@ -1,0 +1,14 @@
+host: 0.0.0.0
+port: 8000
+device: auto
+seed: 42
+expected_num_clients: 3
+input_dim: 266
+encoder_hidden_dim: 64
+activation_dim: 32
+server_hidden_dim: 64
+lr_server: 0.0001
+weight_decay: 0.001
+max_pos_weight: 5.0
+results_dir: results/label_private_splitfed/server
+auth_token: dev-sfl-token

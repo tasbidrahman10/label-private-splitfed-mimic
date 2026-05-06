@@ -1,0 +1,9 @@
+mode: option_b
+num_rounds: 3
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: Label-private SplitFed protocol. Client sends activations only, computes label loss locally, and exchanges gradient signals with the server.
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/option_b

@@ -1,9 +1,14 @@
 ipykernel
 pandas
 numpy
-scikit-learn
+scikit-learn==1.6.1; python_version < "3.14"
+scikit-learn; python_version >= "3.14"
 matplotlib
 seaborn
 tqdm
 torch
 torchvision
+fastapi
+uvicorn
+requests
+pyyaml
