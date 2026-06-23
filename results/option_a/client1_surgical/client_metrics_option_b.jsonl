@@ -1,0 +1,2 @@
+{"round": 1, "client_id": 1, "batches": 1, "avg_local_loss": 0.834199070930481, "activation_bytes": 8192, "gradient_bytes": 8192}
+{"round": 1, "client_id": 1, "val_batches": 1, "auroc": 0.9515151515151514, "auprc": 0.8521202361782072, "f1": 0.4}

@@ -1,0 +1,2 @@
+round,client_id,batches,avg_server_loss,activation_bytes,gradient_bytes
+1,0,1,1.5484610795974731,8192,8192

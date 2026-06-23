@@ -1,0 +1,12 @@
+{"round": 1, "client_id": 0, "batches": 1, "avg_server_loss": 1.8798960447311401, "activation_bytes": 8192, "gradient_bytes": 8192}
+{"round": 1, "client_id": 0, "val_batches": 1, "auroc": 0.011217948717948715, "auprc": 0.10845665699491462, "f1": 0.0}
+{"round": 1, "client_id": 0, "batches": 200, "avg_server_loss": 0.5372485169768333, "activation_bytes": 1638400, "gradient_bytes": 1638400}
+{"round": 1, "client_id": 0, "val_batches": 100, "auroc": 0.9545845946964577, "auprc": 0.8533425973307043, "f1": 0.6759735488611315}
+{"round": 2, "client_id": 0, "batches": 200, "avg_server_loss": 0.5755570276081562, "activation_bytes": 1638400, "gradient_bytes": 1638400}
+{"round": 2, "client_id": 0, "val_batches": 100, "auroc": 0.945399283739349, "auprc": 0.8237015574574735, "f1": 0.6609918578830496}
+{"round": 3, "client_id": 0, "batches": 200, "avg_server_loss": 0.5598873662948608, "activation_bytes": 1638400, "gradient_bytes": 1638400}
+{"round": 3, "client_id": 0, "val_batches": 100, "auroc": 0.9453656292955781, "auprc": 0.8277286299481491, "f1": 0.6636670416197975}
+{"round": 4, "client_id": 0, "batches": 200, "avg_server_loss": 0.5771927995979786, "activation_bytes": 1638400, "gradient_bytes": 1638400}
+{"round": 4, "client_id": 0, "val_batches": 100, "auroc": 0.9468283310345177, "auprc": 0.8289151846216338, "f1": 0.669449715370019}
+{"round": 5, "client_id": 0, "batches": 200, "avg_server_loss": 0.5428376035392284, "activation_bytes": 1638400, "gradient_bytes": 1638400}
+{"round": 5, "client_id": 0, "val_batches": 100, "auroc": 0.9472095671260498, "auprc": 0.8290418068488127, "f1": 0.6704631738800304}

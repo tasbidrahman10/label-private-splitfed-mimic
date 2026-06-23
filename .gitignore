@@ -34,3 +34,12 @@ plan_extracted_tmp.txt
 
 # Cloudflared binary if downloaded locally
 cloudflared*
+
+# Track experiment result CSVs and summary JSONLs (no raw data, just metrics)
+!results/
+!results/**
+!results/**/*.csv
+!results/**/*.jsonl
+!results/PAPER_RESULTS.md
+# But still exclude model checkpoints in results
+results/**/*.pth
