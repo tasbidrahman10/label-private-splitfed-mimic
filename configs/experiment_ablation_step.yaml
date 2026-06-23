@@ -1,0 +1,30 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Decay Function Ablation — Rotating straggler scenario (no attack).
+  Client 2 alternates: submits in odd rounds (10s delay, within 25s window)
+  and misses even rounds (30s delay, outside window).
+  This creates tau=1 every time Client 2 re-submits, making the staleness
+  decay function choice produce measurably different aggregation weights.
+  Run 4 times with server_ablation_{linear,exponential,polynomial,step}.yaml.
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+fedavg_wait_seconds: 120.0
+
+# Flat delay for clients 0 and 1 (always submit within window)
+delay_config:
+  0: 0
+  1: 5
+
+# Per-round delay schedule for Client 2:
+# Odd rounds  (1,3,5,7,9)  -> 10s delay (within 25s window, submits with tau=1)
+# Even rounds (2,4,6,8,10) -> 30s delay (misses 25s window, staleness increments)
+delay_schedule:
+  2: [10, 30, 10, 30, 10, 30, 10, 30, 10, 30]
+
+attack_config: {}
+
+results_dir: results/ablation_step

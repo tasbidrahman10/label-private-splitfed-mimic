@@ -1,0 +1,30 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Async-SplitFed-IR experiment. Clients submit encoders after configurable
+  delays (async simulation). Server aggregates on window deadline using
+  staleness-aware, anomaly-gated RobustAsyncFedAvg (SNAS detection).
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/async_splitfed
+
+# Time budget for clients to wait for global encoder after submission.
+# Must exceed async_window_seconds (25s) plus FedAvg compute time.
+fedavg_wait_seconds: 120.0
+
+# Per-client submission delay in seconds (simulated async arrival).
+# Override per experiment scenario. Default: no delay (synchronous baseline check).
+# Scenario examples:
+#   Mild lag:        {"0": 0, "1": 5, "2": 10}
+#   One dropout:     {"0": 0, "1": 0, "2": 30}   (client 2 exceeds 25s window)
+#   Rotating:        set per round via CLI --delay-config
+delay_config:
+  0: 0    # Client 0 (Medical)  — submits immediately
+  1: 5    # Client 1 (Surgical) — 5s delay (within window)
+  2: 30   # Client 2 (Cardiac)  — 30s delay (exceeds 25s window → MISSES round)
+
+# Per-client attack injection (empty = clean run).
+attack_config: {}

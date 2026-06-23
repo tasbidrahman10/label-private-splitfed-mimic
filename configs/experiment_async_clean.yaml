@@ -1,0 +1,22 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Paper Experiment — Async-SplitFed-IR, clean run (no attacks).
+  Mild lag scenario: Client 1 +5s, Client 2 +10s. All 3 clients submit
+  within the 25s window every round. Establishes the async performance
+  baseline for comparison against sync-FedAvg and attack scenarios.
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/async_clean
+
+fedavg_wait_seconds: 120.0
+
+delay_config:
+  0: 0    # Medical  — immediate
+  1: 5    # Surgical — 5s lag
+  2: 10   # Cardiac  — 10s lag (all within 25s window)
+
+attack_config: {}

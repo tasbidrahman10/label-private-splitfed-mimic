@@ -1,5 +1,5 @@
 mode: option_b
-num_rounds: 5
+num_rounds: 10
 local_epochs: 1
 batch_size: 64
 fedavg_every_round: true

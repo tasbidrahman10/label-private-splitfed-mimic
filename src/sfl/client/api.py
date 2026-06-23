@@ -94,6 +94,10 @@ class SFLServerClient:
             },
         )
 
+    def open_fedavg_round(self) -> dict[str, Any]:
+        """Signal the server to open the async submission window for this round."""
+        return self._request("POST", "/fedavg/open_round")
+
     def submit_encoder(
         self,
         client_id: int,

@@ -10,13 +10,13 @@ server_hidden_dim: 64
 lr_server: 0.0001
 weight_decay: 0.001
 max_pos_weight: 5.0
-results_dir: results/label_private_splitfed/server
+results_dir: results/ablation_exponential/server
 auth_token: dev-sfl-token
 
 # Async-SplitFed-IR extension parameters
 async_window_seconds: 25.0      # T_base: submission window duration (seconds)
 max_consecutive_misses: 3       # K_max: flag client after this many missed rounds
-staleness_decay: exponential    # decay function: linear | exponential | polynomial | step
+staleness_decay: exponential
 rehab_rounds: 3                 # clean rounds before a quarantined client re-enters
 
 # SNAS thresholds (calibrate from warm-up runs before attack experiments)

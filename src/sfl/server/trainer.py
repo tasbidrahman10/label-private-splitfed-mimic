@@ -52,6 +52,9 @@ def option_b_backward(
     if context.client_id != client_id:
         raise ValueError("Option B context does not belong to this client")
 
+    # Save activation batch for SNAS computation at round close (before context is discarded)
+    state.activation_buffer[client_id] = context.activation.detach().cpu().numpy()
+
     logit_grad = payload_to_tensor(logit_gradient_payload, state.device)
     state.optimizer.zero_grad()
     context.logits.backward(logit_grad)

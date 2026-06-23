@@ -12,6 +12,7 @@ import requests
 from sfl.client.api import SFLServerClient
 from sfl.client.dataset import load_client_dataloaders, load_encoder_weights_path
 from sfl.client.trainer import OptionBClientTrainer
+from sfl.common.attack_simulator import AttackSimulator
 from sfl.common.config import load_yaml
 from sfl.common.config import ensure_dir
 from sfl.common.logging_utils import choose_device, set_seed
@@ -36,6 +37,27 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--skip-fedavg", action="store_true")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--mode", choices=["option_b"], default=None)
+    # Async simulation parameters
+    parser.add_argument(
+        "--delay-config",
+        default=None,
+        help='JSON dict of per-client submission delays in seconds. '
+             'Example: \'{"0": 0, "1": 5, "2": 10}\'. '
+             'Clients with delay > window_seconds miss the aggregation round.',
+    )
+    parser.add_argument(
+        "--attack-config",
+        default=None,
+        help='JSON dict of per-client attack configs. '
+             'Example: \'{"1": {"type": "gradient_scaling", "params": {"scale": 10.0}}}\'. '
+             'Applied to encoder weights before submission.',
+    )
+    parser.add_argument(
+        "--fedavg-wait-seconds",
+        type=float,
+        default=None,
+        help="Max seconds to wait for global encoder after FedAvg (default from experiment config or 300s).",
+    )
     return parser
 
 
@@ -95,6 +117,41 @@ def run_all_clients(args: argparse.Namespace) -> None:
     summary_csv = results_dir / f"experiment_summary_{mode}_{run_id}.csv"
     summary_rows: list[dict] = []
 
+    # Async simulation: delay before each client's FedAvg submission
+    delay_config: dict[int, float] = {}
+    raw_delay = args.delay_config or experiment_config.get("delay_config")
+    if raw_delay:
+        if isinstance(raw_delay, str):
+            raw_delay = json.loads(raw_delay)
+        delay_config = {int(k): float(v) for k, v in raw_delay.items()}
+
+    # Per-round delay schedule: overrides delay_config for specific rounds.
+    # Format: {client_id: [delay_round1, delay_round2, ..., delay_round_N]}
+    # Used for ablation scenarios where a client alternates between submitting and missing.
+    delay_schedule: dict[int, list[float]] = {}
+    raw_schedule = experiment_config.get("delay_schedule")
+    if raw_schedule:
+        delay_schedule = {int(k): [float(v) for v in vs] for k, vs in raw_schedule.items()}
+
+    # Attack injection: poisoned encoder weights for specified clients
+    attack_config: dict[int, dict] = {}
+    raw_attack = args.attack_config or experiment_config.get("attack_config")
+    if raw_attack:
+        if isinstance(raw_attack, str):
+            raw_attack = json.loads(raw_attack)
+        attack_config = {int(k): v for k, v in raw_attack.items()}
+
+    # Max wait for global encoder — must exceed the server's window + FedAvg time
+    fedavg_wait = (
+        args.fedavg_wait_seconds
+        or float(experiment_config.get("fedavg_wait_seconds", 300.0))
+    )
+
+    if delay_config:
+        print(f"Async simulation active — delay_config: {delay_config}")
+    if attack_config:
+        print(f"Attack injection active — attack_config: {attack_config}")
+
     client_paths = args.client_configs or DEFAULT_CLIENT_CONFIGS
     trainers = [
         build_trainer(load_yaml(path), experiment_config, api, device)
@@ -144,11 +201,46 @@ def run_all_clients(args: argparse.Namespace) -> None:
 
         if fedavg_enabled:
             fedavg_started = time.perf_counter()
-            statuses = [trainer.submit_encoder_for_fedavg() for trainer, _save_name in trainers]
-            print(f"FedAvg statuses: {statuses}")
+            # Explicitly open the async window before any client submits.
+            # This ensures late submissions find a closed window and are rejected
+            # rather than accidentally triggering a new round.
+            open_status = api.open_fedavg_round()
+            print(f"  Async window opened: {open_status}")
             for trainer, _save_name in trainers:
-                trainer.load_global_encoder(max_wait_seconds=30.0)
+                cid = trainer.client_id
+
+                # Per-round schedule takes priority over flat delay_config
+                if cid in delay_schedule and round_idx - 1 < len(delay_schedule[cid]):
+                    delay = delay_schedule[cid][round_idx - 1]
+                else:
+                    delay = delay_config.get(cid, 0.0)
+                if delay > 0.0:
+                    print(f"  Client {cid}: sleeping {delay}s before FedAvg submission (async sim)")
+                    time.sleep(delay)
+
+                # Optionally inject attack on encoder weights before submission
+                if cid in attack_config:
+                    cfg = attack_config[cid]
+                    original_state = {k: v.clone() for k, v in trainer.encoder.state_dict().items()}
+                    poisoned_state = AttackSimulator.apply(
+                        original_state, cfg["type"], cfg.get("params", {})
+                    )
+                    trainer.encoder.load_state_dict(poisoned_state)
+                    print(f"  Client {cid}: injected attack '{cfg['type']}'")
+                    status = trainer.submit_encoder_for_fedavg()
+                    # Restore clean weights so client continues training normally
+                    trainer.encoder.load_state_dict(original_state)
+                    print(f"  Client {cid}: restored clean encoder after poisoned submission")
+                else:
+                    status = trainer.submit_encoder_for_fedavg()
+
+                print(f"  Client {cid} FedAvg submit: {status}")
+
+            print(f"Waiting up to {fedavg_wait:.0f}s for global encoder (async window in progress)...")
+            for trainer, _save_name in trainers:
+                trainer.load_global_encoder(max_wait_seconds=fedavg_wait)
             print("Loaded global encoder into all clients")
+
             fedavg_duration = time.perf_counter() - fedavg_started
             fedavg_row = {
                 "run_id": run_id,
@@ -156,7 +248,8 @@ def run_all_clients(args: argparse.Namespace) -> None:
                 "round": round_idx,
                 "event": "fedavg",
                 "duration_sec": fedavg_duration,
-                "statuses": statuses,
+                "delay_config": delay_config,
+                "attack_config": {str(k): v for k, v in attack_config.items()},
             }
             with summary_jsonl.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(fedavg_row) + "\n")
