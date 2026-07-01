@@ -1,0 +1,29 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Adaptive Attack A (Task 3) -- threshold-aware scaling.
+  Attacker knows SNAS formula, binary-searches scale to land just
+  below quarantine threshold (90% of 0.35 = 0.315 target SNAS).
+  Tests whether SNAS detects a knowledgeable adaptive adversary.
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/adaptive_attack_a
+
+fedavg_wait_seconds: 120.0
+
+delay_config:
+  0: 0
+  1: 5
+  2: 10
+
+attack_config:
+  1:
+    type: threshold_aware_scaling
+    params:
+      beta: 0.35
+      gamma: 0.65
+      threshold_quarantine: 0.35
+      safety_margin: 0.9

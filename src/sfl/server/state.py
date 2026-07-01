@@ -16,6 +16,10 @@ from sfl.common.logging_utils import choose_device, set_seed
 from sfl.common.models import ServerTopModel
 from sfl.server.anomaly_detector import MaliciousClientGate
 from sfl.server.async_controller import AsyncRoundController
+from sfl.server.baseline_aggregators import (
+    fltrust_aggregate, krum_aggregate, trimmed_mean_aggregate,
+    state_dict_to_flat, flat_to_state_dict,
+)
 from sfl.server.robust_fedavg import RobustAsyncFedAvg
 from sfl.server.staleness import StalenessDecay, StalenessRegistry
 from sfl.server.trust_state import TrustState
@@ -64,6 +68,11 @@ class ServerState:
     trust: TrustState = field(init=False)
     robust_fedavg: RobustAsyncFedAvg = field(init=False)
 
+    # Baseline aggregator fields (Task 1 — comparison experiments)
+    # aggregator_type: 'snas' | 'krum' | 'trimmed_mean' | 'fltrust'
+    fltrust_root_data: dict[int, np.ndarray] | None = None  # client_id -> (n, 266) features
+    fltrust_root_labels: dict[int, np.ndarray] | None = None  # client_id -> (n,) labels
+
     def __post_init__(self) -> None:
         set_seed(int(self.config.get("seed", 42)))
         self.device = choose_device(str(self.config.get("device", "auto")))
@@ -106,6 +115,53 @@ class ServerState:
             clip_ratio=float(self.config.get("fedavg_clip_ratio", 2.0)),
         )
 
+        # FLTrust root data — reload on reset if aggregator changed to fltrust
+        self.fltrust_root_data = None
+        self.fltrust_root_labels = None
+        if self.config.get("aggregator_type", "snas") == "fltrust":
+            self._load_fltrust_root_data()
+
+    def _load_fltrust_root_data(self) -> None:
+        """Load FLTrust root dataset from configs/fltrust_root_indices.json."""
+        import pickle
+        import pandas as pd
+        from sfl.common.config import repo_root, load_yaml as _load_yaml
+        from sfl.client.dataset import VASO_COLS
+
+        root = repo_root()
+        index_file = root / "configs" / "fltrust_root_indices.json"
+        if not index_file.exists():
+            raise FileNotFoundError(
+                f"FLTrust root indices not found at {index_file}. "
+                "Run: python scripts/create_fltrust_root.py"
+            )
+        meta = json.loads(index_file.read_text())
+        client_cfgs = [(0, "medical"), (1, "surgical"), (2, "cardiac")]
+
+        self.fltrust_root_data = {}
+        self.fltrust_root_labels = {}
+
+        for cid, cname in client_cfgs:
+            cfg = _load_yaml(str(root / "configs" / "clients" / f"client{cid}_{cname}.yaml"))
+            indices = meta["clients"][str(cid)]
+            df = pd.read_csv(root / cfg["data_path"])
+            sub = df.iloc[indices]
+
+            target_col = cfg.get("target_col", "mortality")
+            y = sub[target_col].values.astype(np.float32)
+            feature_cols = [c for c in sub.columns if c != target_col]
+            X_raw = sub[feature_cols].values.astype(np.float32)
+
+            with open(root / cfg["model_dir"] / "scaler.pkl", "rb") as fh:
+                scaler = pickle.load(fh)
+            vaso_mask = np.array([c in VASO_COLS for c in feature_cols])
+            X_scaled = X_raw.copy()
+            X_scaled[:, ~vaso_mask] = scaler.transform(X_raw[:, ~vaso_mask]).astype(np.float32)
+
+            self.fltrust_root_data[cid] = X_scaled
+            self.fltrust_root_labels[cid] = y
+
+
     def expected_token(self) -> str:
         return str(self.config.get("auth_token", ""))
 
@@ -130,3 +186,110 @@ class ServerState:
 
     def register_client(self, registration: ClientRegistration) -> None:
         self.clients[registration.client_id] = registration
+
+    def reset(self, config_overrides: dict | None = None) -> None:
+        """
+        Reinitialise all state fields in place — called by POST /admin/reset.
+        Allows automated multi-seed and sensitivity sweeps without restarting
+        the server process. Config overrides (e.g. aggregator_type, snas_gamma)
+        are merged into the current config before reinitialisation.
+        """
+        if config_overrides:
+            self.config = {**self.config, **config_overrides}
+
+        # Re-run __post_init__ logic
+        set_seed(int(self.config.get("seed", 42)))
+        self.device = choose_device(str(self.config.get("device", "auto")))
+        self.results_dir = ensure_dir(
+            self.config.get("results_dir", "results/label_private_splitfed/server")
+        )
+        self.model = ServerTopModel(
+            input_dim=int(self.config.get("activation_dim", 32)),
+            hidden_dim=int(self.config.get("server_hidden_dim", 64)),
+        ).to(self.device)
+        self.optimizer = optim.Adam(
+            self.model.parameters(),
+            lr=float(self.config.get("lr_server", 1e-4)),
+            weight_decay=float(self.config.get("weight_decay", 1e-3)),
+        )
+
+        n = int(self.config.get("expected_num_clients", 3))
+        client_ids = list(range(n))
+
+        self.clients = {}
+        self.option_b_contexts = {}
+        self.global_encoder = None
+        self.prev_global_encoder = None
+        self.metrics = []
+        self.activation_buffer = {}
+        self.current_round = 0
+
+        self.staleness_registry = StalenessRegistry(client_ids)
+        self.async_controller = AsyncRoundController(
+            client_ids=client_ids,
+            base_window_seconds=float(self.config.get("async_window_seconds", 25.0)),
+            max_consecutive_misses=int(self.config.get("max_consecutive_misses", 3)),
+        )
+        self.gate = MaliciousClientGate(
+            threshold_quarantine=float(self.config.get("snas_threshold_quarantine", 0.35)),
+            threshold_flag=float(self.config.get("snas_threshold_flag", 0.22)),
+            alpha=float(self.config.get("snas_alpha", 0.0)),
+            beta=float(self.config.get("snas_beta", 0.35)),
+            gamma=float(self.config.get("snas_gamma", 0.65)),
+        )
+        self.trust = TrustState(
+            client_ids=client_ids,
+            rehab_rounds=int(self.config.get("rehab_rounds", 3)),
+        )
+        decay_name = str(self.config.get("staleness_decay", "exponential"))
+        self.robust_fedavg = RobustAsyncFedAvg(
+            decay_fn=StalenessDecay.get(decay_name),
+            clip_ratio=float(self.config.get("fedavg_clip_ratio", 2.0)),
+        )
+
+        # FLTrust root data — reload on reset if aggregator changed to fltrust
+        self.fltrust_root_data = None
+        self.fltrust_root_labels = None
+        if self.config.get("aggregator_type", "snas") == "fltrust":
+            self._load_fltrust_root_data()
+
+    def _load_fltrust_root_data(self) -> None:
+        """Load FLTrust root dataset from configs/fltrust_root_indices.json."""
+        import pickle
+        import pandas as pd
+        from sfl.common.config import repo_root, load_yaml as _load_yaml
+        from sfl.client.dataset import VASO_COLS
+
+        root = repo_root()
+        index_file = root / "configs" / "fltrust_root_indices.json"
+        if not index_file.exists():
+            raise FileNotFoundError(
+                f"FLTrust root indices not found at {index_file}. "
+                "Run: python scripts/create_fltrust_root.py"
+            )
+        meta = json.loads(index_file.read_text())
+        client_cfgs = [(0, "medical"), (1, "surgical"), (2, "cardiac")]
+
+        self.fltrust_root_data = {}
+        self.fltrust_root_labels = {}
+
+        for cid, cname in client_cfgs:
+            cfg = _load_yaml(str(root / "configs" / "clients" / f"client{cid}_{cname}.yaml"))
+            indices = meta["clients"][str(cid)]
+            df = pd.read_csv(root / cfg["data_path"])
+            sub = df.iloc[indices]
+
+            target_col = cfg.get("target_col", "mortality")
+            y = sub[target_col].values.astype(np.float32)
+            feature_cols = [c for c in sub.columns if c != target_col]
+            X_raw = sub[feature_cols].values.astype(np.float32)
+
+            with open(root / cfg["model_dir"] / "scaler.pkl", "rb") as fh:
+                scaler = pickle.load(fh)
+            vaso_mask = np.array([c in VASO_COLS for c in feature_cols])
+            X_scaled = X_raw.copy()
+            X_scaled[:, ~vaso_mask] = scaler.transform(X_raw[:, ~vaso_mask]).astype(np.float32)
+
+            self.fltrust_root_data[cid] = X_scaled
+            self.fltrust_root_labels[cid] = y
+

@@ -1,0 +1,62 @@
+[
+  {
+    "experiment": "Krum_E1_gradient_scaling",
+    "aggregator": "krum",
+    "seeds": [
+      42,
+      7,
+      123,
+      2024,
+      31415
+    ],
+    "mean_auroc": 0.96535,
+    "std_auroc": 0.000473,
+    "raw_values": [
+      0.964682,
+      0.965699,
+      0.965799,
+      0.965526,
+      0.965044
+    ]
+  },
+  {
+    "experiment": "Krum_E2_free_rider",
+    "aggregator": "krum",
+    "seeds": [
+      42,
+      7,
+      123,
+      2024,
+      31415
+    ],
+    "mean_auroc": 0.965268,
+    "std_auroc": 0.000445,
+    "raw_values": [
+      0.965271,
+      0.965785,
+      0.965223,
+      0.965484,
+      0.964578
+    ]
+  },
+  {
+    "experiment": "Krum_E4_attack_straggler",
+    "aggregator": "krum",
+    "seeds": [
+      42,
+      7,
+      123,
+      2024,
+      31415
+    ],
+    "mean_auroc": 0.96535,
+    "std_auroc": 0.000473,
+    "raw_values": [
+      0.964682,
+      0.965699,
+      0.965799,
+      0.965526,
+      0.965044
+    ]
+  }
+]

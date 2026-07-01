@@ -9,6 +9,10 @@ from pydantic import BaseModel
 
 from sfl.common.config import load_yaml
 from sfl.common.serialization import base64_to_state_dict, state_dict_to_base64
+from sfl.server.baseline_aggregators import (
+    flat_to_state_dict, fltrust_aggregate, krum_aggregate,
+    state_dict_to_flat, trimmed_mean_aggregate,
+)
 from sfl.server.state import ClientRegistration, ServerState
 from sfl.server.trainer import (
     option_b_backward,
@@ -58,6 +62,10 @@ class SaveServerRequest(BaseModel):
     filename: str = "server_model_latest.pth"
 
 
+class ResetRequest(BaseModel):
+    config_overrides: dict = {}  # e.g. {"aggregator_type": "krum", "snas_gamma": 0.5}
+
+
 # ---------------------------------------------------------------------------
 # Async round background task
 # ---------------------------------------------------------------------------
@@ -93,8 +101,159 @@ async def _run_async_round(state: ServerState) -> None:
             state.current_round += 1
 
 
+async def _process_round_baseline(
+    state: ServerState,
+    submitted: dict,
+    aggregator: str,
+) -> None:
+    """
+    Aggregation path for baseline methods (Krum, Trimmed Mean, FLTrust).
+    These methods have NO staleness awareness and NO anomaly gating — this
+    is intentional and is the key limitation documented in the paper comparison.
+    """
+    async with state.lock:
+        round_idx = state.current_round
+
+        if not submitted:
+            logger.warning("Baseline %s round %d: no submissions.", aggregator, round_idx)
+            state.global_encoder = state.prev_global_encoder
+            state.current_round += 1
+            return
+
+        sample_counts = state.async_controller.get_sample_counts()
+
+        # Flatten all submitted state_dicts to numpy vectors for baseline aggregators
+        flat_submissions: dict[int, "np.ndarray"] = {
+            cid: state_dict_to_flat(w) for cid, w in submitted.items()
+        }
+
+        # Reference state_dict structure (for unflattening the result)
+        ref_sd = next(iter(submitted.values()))
+
+        new_flat: "np.ndarray | None" = None
+        selected_client: int | None = None
+
+        if aggregator == "krum":
+            new_flat, selected_client = krum_aggregate(flat_submissions, f_byzantine=1)
+            logger.info("Krum selected client %s in round %d.", selected_client, round_idx)
+
+        elif aggregator == "trimmed_mean":
+            new_flat = trimmed_mean_aggregate(flat_submissions, trim_ratio=0.2)
+
+        elif aggregator == "fltrust":
+            # Compute root gradient: run root data through global encoder + server model
+            root_gradient = _compute_fltrust_root_gradient(state)
+            new_flat = fltrust_aggregate(flat_submissions, root_gradient, sample_counts)
+
+        if new_flat is not None:
+            new_global = flat_to_state_dict(new_flat, ref_sd, device=state.device)
+            state.global_encoder = new_global
+            logger.info(
+                "Baseline '%s' round %d: global encoder updated from %d submissions.",
+                aggregator, round_idx, len(submitted),
+            )
+        else:
+            state.global_encoder = state.prev_global_encoder
+
+        # Log round metrics (simpler than SNAS — no gate decisions)
+        for cid in submitted:
+            state.append_metric({
+                "round": round_idx,
+                "client_id": cid,
+                "aggregator": aggregator,
+                "included_in_aggregation": True,
+                "krum_selected": (cid == selected_client) if selected_client is not None else None,
+            })
+
+        state.staleness_registry.update_after_round(set(submitted.keys()))
+        state.current_round += 1
+
+
+def _compute_fltrust_root_gradient(state: ServerState) -> "np.ndarray":
+    """
+    Compute a reference gradient for FLTrust from the server's root dataset.
+
+    In the split-learning context, the server cannot run the client encoder
+    directly (it doesn't hold the encoder weights on the data path). Instead,
+    we use the current global encoder state to compute root activations, then
+    backpropagate through the server model to obtain the root gradient w.r.t.
+    encoder weights — treating the global encoder as the reference encoder.
+
+    This approximation is the most faithful adaptation of FLTrust to the
+    label-private split-learning setting, and is documented as such in the paper.
+    """
+    import numpy as np
+    from sfl.common.models import ClientEncoder
+
+    if state.fltrust_root_data is None or state.global_encoder is None:
+        # No root data or no global encoder yet — return zero vector matching
+        # the encoder parameter count as a neutral reference
+        param_count = sum(
+            v.numel() for v in (state.global_encoder or {}).values()
+            if isinstance(v, __import__("torch").Tensor) and v.is_floating_point()
+        )
+        return np.zeros(param_count or 1, dtype=np.float32)
+
+    import torch
+    from sfl.common.config import load_yaml
+    from sfl.common.config import repo_root
+
+    cfg_path = repo_root() / "configs" / "clients" / "client0_medical.yaml"
+    cfg = load_yaml(str(cfg_path))
+    encoder = ClientEncoder(
+        input_dim=int(cfg.get("input_dim", 266)),
+        hidden_dim=int(cfg.get("encoder_hidden_dim", 64)),
+    ).to(state.device)
+    encoder.load_state_dict(state.global_encoder)
+    encoder.train()
+
+    all_grads = []
+    for cid, X_root in state.fltrust_root_data.items():
+        y_root = state.fltrust_root_labels[cid]
+        X_t = torch.tensor(X_root, dtype=torch.float32, device=state.device)
+        y_t = torch.tensor(y_root, dtype=torch.float32, device=state.device).unsqueeze(1)
+
+        activation = encoder(X_t)
+        activation_detached = activation.detach().requires_grad_(True)
+        logits = state.model(activation_detached)
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(logits, y_t)
+
+        # Get gradient w.r.t. activation, then compute encoder gradient
+        loss.backward()
+        act_grad = activation_detached.grad
+
+        encoder.zero_grad()
+        activation.backward(act_grad)
+
+        grads = []
+        for p in encoder.parameters():
+            if p.grad is not None:
+                grads.append(p.grad.detach().cpu().float().numpy().ravel())
+        if grads:
+            all_grads.append(np.concatenate(grads))
+        encoder.zero_grad()
+
+    if not all_grads:
+        return np.zeros(1, dtype=np.float32)
+
+    root_gradient = np.stack(all_grads).mean(axis=0)
+    return root_gradient
+
+
 async def _process_round(state: ServerState, submitted: dict) -> None:
-    """Core aggregation logic, separated so exceptions can be caught cleanly."""
+    """
+    Core aggregation logic. Branches on aggregator_type:
+      'snas'         -> full SNAS pipeline (gate + RobustAsyncFedAvg)
+      'krum'         -> Krum selection (no staleness, no gate)
+      'trimmed_mean' -> coordinate-wise trimmed mean (no staleness, no gate)
+      'fltrust'      -> FLTrust trust-weighted aggregation (no staleness, no gate)
+    """
+    aggregator = state.config.get("aggregator_type", "snas")
+
+    if aggregator != "snas":
+        await _process_round_baseline(state, submitted, aggregator)
+        return
+
     async with state.lock:
         round_idx = state.current_round
 
@@ -301,6 +460,21 @@ def create_app(config_path: str = "configs/server.yaml") -> FastAPI:
         async with server_state.lock:
             path = server_state.save_checkpoint(request.filename)
         return {"status": "saved", "path": str(path)}
+
+    @app.post("/admin/reset", dependencies=[Depends(require_token)])
+    async def admin_reset(request: ResetRequest) -> dict:
+        """
+        Reinitialise server state in place with optional config overrides.
+        Used by automated multi-seed and sensitivity sweep scripts to avoid
+        manual server restarts between experiment runs.
+        """
+        async with server_state.lock:
+            server_state.reset(request.config_overrides or None)
+        return {
+            "status": "reset",
+            "aggregator_type": server_state.config.get("aggregator_type", "snas"),
+            "seed": server_state.config.get("seed", 42),
+        }
 
     return app
 

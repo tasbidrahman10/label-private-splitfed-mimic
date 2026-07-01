@@ -19,7 +19,11 @@ max_consecutive_misses: 3       # K_max: flag client after this many missed roun
 staleness_decay: exponential    # decay function: linear | exponential | polynomial | step
 rehab_rounds: 3                 # clean rounds before a quarantined client re-enters
 
-# SNAS thresholds (calibrate from warm-up runs before attack experiments)
+# Aggregator selection: 'snas' | 'krum' | 'trimmed_mean' | 'fltrust'
+# Override per baseline experiment via server_baseline_*.yaml configs.
+aggregator_type: snas
+
+# SNAS thresholds (calibrated from warm-up experiments)
 snas_threshold_quarantine: 0.35
 snas_threshold_flag: 0.22
 # SNAS = (alpha*act_div + beta*cosine + gamma*norm) / (1+tau)

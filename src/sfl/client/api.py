@@ -98,6 +98,11 @@ class SFLServerClient:
         """Signal the server to open the async submission window for this round."""
         return self._request("POST", "/fedavg/open_round")
 
+    def reset_server(self, config_overrides: dict | None = None) -> dict[str, Any]:
+        """Reinitialise server state (for automated multi-seed / sweep runs)."""
+        return self._request("POST", "/admin/reset",
+                             json={"config_overrides": config_overrides or {}})
+
     def submit_encoder(
         self,
         client_id: int,

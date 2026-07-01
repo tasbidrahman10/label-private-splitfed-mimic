@@ -1,0 +1,90 @@
+[
+  {
+    "experiment": "E1_gradient_scaling",
+    "seeds": [
+      42,
+      7,
+      123,
+      2024,
+      31415
+    ],
+    "n_seeds": 5,
+    "mean_auroc": 0.95979,
+    "std_auroc": 0.000375,
+    "min_auroc": 0.959442,
+    "max_auroc": 0.96034,
+    "raw_values": [
+      0.959442,
+      0.959474,
+      0.959722,
+      0.959975,
+      0.96034
+    ]
+  },
+  {
+    "experiment": "E2_free_rider",
+    "seeds": [
+      42,
+      7,
+      123,
+      2024,
+      31415
+    ],
+    "n_seeds": 5,
+    "mean_auroc": 0.904158,
+    "std_auroc": 0.007061,
+    "min_auroc": 0.894826,
+    "max_auroc": 0.911447,
+    "raw_values": [
+      0.910677,
+      0.911447,
+      0.894826,
+      0.903744,
+      0.900093
+    ]
+  },
+  {
+    "experiment": "E4_attack_straggler",
+    "seeds": [
+      42,
+      7,
+      123,
+      2024,
+      31415
+    ],
+    "n_seeds": 5,
+    "mean_auroc": 0.957944,
+    "std_auroc": 0.000421,
+    "min_auroc": 0.957445,
+    "max_auroc": 0.95838,
+    "raw_values": [
+      0.957445,
+      0.957928,
+      0.958349,
+      0.957616,
+      0.95838
+    ]
+  },
+  {
+    "experiment": "E6_honest_straggler",
+    "seeds": [
+      42,
+      7,
+      123,
+      2024,
+      31415
+    ],
+    "n_seeds": 5,
+    "mean_auroc": 0.966117,
+    "std_auroc": 0.000437,
+    "min_auroc": 0.965696,
+    "max_auroc": 0.966597,
+    "raw_values": [
+      0.965966,
+      0.966597,
+      0.966568,
+      0.965755,
+      0.965696
+    ]
+  }
+]

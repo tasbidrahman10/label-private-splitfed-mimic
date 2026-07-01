@@ -1,0 +1,5 @@
+experiment,comparison,snas_mean,snas_std,snas_raw,baseline_name,baseline_mean,baseline_std,baseline_raw,wilcoxon_stat,wilcoxon_p,t_stat,t_p,cohens_d,significant_at_05
+E1_gradient_scaling,SNAS_vs_Krum,0.95978,0.00037,"[0.9594, 0.9595, 0.9597, 0.96, 0.9603]",krum,0.96535,0.000473,"[0.964682, 0.965699, 0.965799, 0.965526, 0.965044]",0.0,0.0625,-20.7392,3.2e-05,-13.1184,False
+E2_free_rider,SNAS_vs_Krum,0.90414,0.007062,"[0.9107, 0.9114, 0.8948, 0.9037, 0.9001]",krum,0.965268,0.000445,"[0.965271, 0.965785, 0.965223, 0.965484, 0.964578]",0.0,0.0625,-20.0172,3.7e-05,-12.217,False
+E4_attack_straggler,SNAS_vs_Krum,0.95792,0.000432,"[0.9574, 0.9579, 0.9583, 0.9576, 0.9584]",krum,0.96535,0.000473,"[0.964682, 0.965699, 0.965799, 0.965526, 0.965044]",0.0,0.0625,-32.7941,5e-06,-16.3989,False
+E6_honest_straggler,SNAS_vs_sync_baseline,0.96614,0.000434,"[0.966, 0.9666, 0.9666, 0.9658, 0.9657]",sync_FedAvg,0.9649,N/A,N/A,N/A,N/A,N/A,N/A,N/A,True

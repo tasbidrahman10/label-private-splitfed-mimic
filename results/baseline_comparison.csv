@@ -1,0 +1,10 @@
+aggregator,experiment,mean_auroc_r8_10,snas_auroc_reference,delta_vs_snas,result_csv
+krum,e1_gradient_scaling,0.964682,0.9597,0.004982,E:\project\mimic-split-learning\results\baseline_krum\e1_gradient_scaling\experiment_summary_option_b_20260627_172055_seed42.csv
+krum,e2_free_rider,0.965271,0.9107,0.054571,E:\project\mimic-split-learning\results\baseline_krum\e2_free_rider\experiment_summary_option_b_20260627_172743_seed42.csv
+krum,e4_attack_plus_dropout,0.964682,0.9574,0.007282,E:\project\mimic-split-learning\results\baseline_krum\e4_attack_plus_dropout\experiment_summary_option_b_20260627_173431_seed42.csv
+trimmed_mean,e1_gradient_scaling,0.953913,0.9597,-0.005787,E:\project\mimic-split-learning\results\baseline_trimmed_mean\e1_gradient_scaling\experiment_summary_option_b_20260627_174252_seed42.csv
+trimmed_mean,e2_free_rider,0.822653,0.9107,-0.088047,E:\project\mimic-split-learning\results\baseline_trimmed_mean\e2_free_rider\experiment_summary_option_b_20260627_174930_seed42.csv
+trimmed_mean,e4_attack_plus_dropout,0.954101,0.9574,-0.003299,E:\project\mimic-split-learning\results\baseline_trimmed_mean\e4_attack_plus_dropout\experiment_summary_option_b_20260627_175620_seed42.csv
+fltrust,e1_gradient_scaling,0.953913,0.9597,-0.005787,E:\project\mimic-split-learning\results\baseline_fltrust\e1_gradient_scaling\experiment_summary_option_b_20260627_180436_seed42.csv
+fltrust,e2_free_rider,0.822653,0.9107,-0.088047,E:\project\mimic-split-learning\results\baseline_fltrust\e2_free_rider\experiment_summary_option_b_20260627_181115_seed42.csv
+fltrust,e4_attack_plus_dropout,0.954101,0.9574,-0.003299,E:\project\mimic-split-learning\results\baseline_fltrust\e4_attack_plus_dropout\experiment_summary_option_b_20260627_181804_seed42.csv

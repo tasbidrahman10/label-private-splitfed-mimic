@@ -1,0 +1,33 @@
+mode: option_b
+num_rounds: 15
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Paper Experiment E1 — Gradient scaling attack on Client 1 (Surgical).
+  Client 1 submits encoder weights scaled by 10x every round. No stale clients.
+  Tests whether SNAS detects a consistently adversarial client and quarantines it.
+  Expected: Client 1 flagged/quarantined within 3-5 rounds (after warm-up).
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/adaptive_attack_c
+
+fedavg_wait_seconds: 120.0
+
+delay_config:
+  0: 0
+  1: 5
+  2: 10
+
+attack_config:
+  1:
+    type: slow_ramp
+    params:
+      ramp_rate: 1.15
+      start_scale: 1.0
+
+# Adaptive Attack C (Task 3) -- Slow-Ramp Mimicry.
+# Attacker gradually increases scale across 15 rounds (1.15x per round).
+# Tests whether SNAS memoryless scoring lets slow drift accumulate before
+# crossing the quarantine threshold (scale reaches ~4.0x by round 10,
+# ~6.8x by round 15).

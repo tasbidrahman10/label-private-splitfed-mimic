@@ -37,6 +37,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--skip-fedavg", action="store_true")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--mode", choices=["option_b"], default=None)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed override (default: 42). Pass different values for "
+             "multi-seed statistical validation (Task 2).",
+    )
     # Async simulation parameters
     parser.add_argument(
         "--delay-config",
@@ -105,14 +112,15 @@ def run_all_clients(args: argparse.Namespace) -> None:
     experiment_config = load_yaml(args.experiment_config)
     if args.mode:
         experiment_config["mode"] = args.mode
-    set_seed(42)
+    seed = args.seed if args.seed is not None else int(experiment_config.get("seed", 42))
+    set_seed(seed)
     device = choose_device(args.device)
     server_url = args.server_url or experiment_config["server_url"]
     api = SFLServerClient(server_url, auth_token=str(experiment_config.get("auth_token", "")))
     print(f"Server health: {api.health()}")
     mode = str(experiment_config.get("mode", "option_b"))
     results_dir = ensure_dir(experiment_config.get("results_dir", f"results/{mode}"))
-    run_id = time.strftime("%Y%m%d_%H%M%S")
+    run_id = f"{time.strftime('%Y%m%d_%H%M%S')}_seed{seed}"
     summary_jsonl = results_dir / f"experiment_summary_{mode}_{run_id}.jsonl"
     summary_csv = results_dir / f"experiment_summary_{mode}_{run_id}.csv"
     summary_rows: list[dict] = []
@@ -222,11 +230,15 @@ def run_all_clients(args: argparse.Namespace) -> None:
                 if cid in attack_config:
                     cfg = attack_config[cid]
                     original_state = {k: v.clone() for k, v in trainer.encoder.state_dict().items()}
-                    poisoned_state = AttackSimulator.apply(
-                        original_state, cfg["type"], cfg.get("params", {})
-                    )
+
+                    # Slow-ramp and threshold-aware attacks need round_idx injected
+                    params = dict(cfg.get("params", {}))
+                    if cfg["type"] == "slow_ramp":
+                        params["round_num"] = round_idx
+
+                    poisoned_state = AttackSimulator.apply(original_state, cfg["type"], params)
                     trainer.encoder.load_state_dict(poisoned_state)
-                    print(f"  Client {cid}: injected attack '{cfg['type']}'")
+                    print(f"  Client {cid}: injected attack '{cfg['type']}' (round {round_idx})")
                     status = trainer.submit_encoder_for_fedavg()
                     # Restore clean weights so client continues training normally
                     trainer.encoder.load_state_dict(original_state)

@@ -83,6 +83,82 @@ class AttackSimulator:
         """
         return AttackSimulator.gradient_scaling(weights, scale=scale)
 
+    # ------------------------------------------------------------------
+    # Adaptive attacks (Task 3) — attacker knows SNAS structure
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def threshold_aware_scaling(
+        weights: dict[str, torch.Tensor],
+        beta: float = 0.35,
+        gamma: float = 0.65,
+        threshold_quarantine: float = 0.35,
+        safety_margin: float = 0.9,
+        norm_cap_log_base: float = 100.0,
+    ) -> tuple[dict[str, torch.Tensor], float]:
+        """
+        Attack A — Threshold-Aware Gradient Scaling ('Just-Under').
+
+        Binary-searches a scale factor s such that the resulting SNAS
+        (assuming tau=0, on-time submission) lands at
+        safety_margin * threshold_quarantine. This maximises damage while
+        staying below the quarantine threshold.
+
+        cosine_anomaly = 0 because scaling preserves weight direction exactly.
+        norm_anomaly = |log(s)| / log(norm_cap_log_base), capped at 1.
+
+        Returns (poisoned_weights, chosen_scale_factor).
+        Caller should log the scale factor per round.
+        """
+        import numpy as np
+
+        def snas_at_scale(s: float) -> float:
+            cosine_anomaly = 0.0  # scaling preserves direction exactly
+            single_ratio = min(abs(np.log(max(s, 1e-9))) / np.log(norm_cap_log_base), 1.0)
+            norm_anomaly = single_ratio  # identical for all layers at uniform scale
+            return beta * cosine_anomaly + gamma * norm_anomaly
+
+        lo, hi = 1.0, 50.0
+        target = safety_margin * threshold_quarantine
+        for _ in range(40):  # binary search
+            mid = (lo + hi) / 2.0
+            if snas_at_scale(mid) < target:
+                lo = mid
+            else:
+                hi = mid
+        scale = lo
+
+        poisoned = {
+            k: v.clone().float() * scale if v.is_floating_point() else v.clone()
+            for k, v in weights.items()
+        }
+        return poisoned, scale
+
+    @staticmethod
+    def slow_ramp(
+        weights: dict[str, torch.Tensor],
+        round_num: int,
+        ramp_rate: float = 1.15,
+        start_scale: float = 1.0,
+    ) -> tuple[dict[str, torch.Tensor], float]:
+        """
+        Attack C — Slow-Ramp Mimicry.
+
+        Gradually increases scaling factor across rounds:
+        scale(r) = start_scale * ramp_rate ** (r - 1)
+
+        Tests whether SNAS's per-round memoryless scoring allows a slow
+        drift to accumulate damage before crossing the quarantine threshold.
+
+        Returns (poisoned_weights, scale_factor_this_round).
+        """
+        scale = start_scale * (ramp_rate ** (round_num - 1))
+        poisoned = {
+            k: v.clone().float() * scale if v.is_floating_point() else v.clone()
+            for k, v in weights.items()
+        }
+        return poisoned, scale
+
     @classmethod
     def apply(
         cls,
@@ -98,11 +174,14 @@ class AttackSimulator:
         """
         params = params or {}
         dispatch = {
-            "gradient_scaling": cls.gradient_scaling,
-            "label_flip_proxy": cls.label_flip_proxy,
-            "free_rider": cls.free_rider,
-            "backdoor": cls.backdoor,
-            "slow_poisoner": cls.slow_poisoner,
+            "gradient_scaling":        cls.gradient_scaling,
+            "label_flip_proxy":        cls.label_flip_proxy,
+            "free_rider":              cls.free_rider,
+            "backdoor":                cls.backdoor,
+            "slow_poisoner":           cls.slow_poisoner,
+            # Adaptive attacks (Task 3)
+            "threshold_aware_scaling": lambda w, **kw: cls.threshold_aware_scaling(w, **kw)[0],
+            "slow_ramp":               lambda w, **kw: cls.slow_ramp(w, **kw)[0],
         }
         if attack_type not in dispatch:
             raise ValueError(

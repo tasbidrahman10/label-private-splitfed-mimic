@@ -43,3 +43,4 @@ cloudflared*
 !results/PAPER_RESULTS.md
 # But still exclude model checkpoints in results
 results/**/*.pth
+results/label_private_splitfed/server/server_metrics.jsonl

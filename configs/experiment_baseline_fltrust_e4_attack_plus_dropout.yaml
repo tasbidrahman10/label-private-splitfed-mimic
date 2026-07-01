@@ -1,0 +1,27 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Paper Experiment E4 — Gradient scaling attack on Client 1 + Client 2 dropout.
+  This is the hardest experimental case: the server must simultaneously identify
+  Client 1 as adversarial (high SNAS despite on-time submission) and Client 2 as
+  a legitimate straggler (high staleness but low SNAS due to dampening).
+  Correct outcome: Client 1 quarantined, Client 2 NOT quarantined (false positive = 0).
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/baseline_fltrust/e4_attack_plus_dropout
+
+fedavg_wait_seconds: 120.0
+
+delay_config:
+  0: 0    # Medical  — immediate (honest)
+  1: 5    # Surgical — 5s lag (attacker, but on time)
+  2: 30   # Cardiac  — 30s lag (honest straggler, misses window)
+
+attack_config:
+  1:
+    type: gradient_scaling
+    params:
+      scale: 10.0
