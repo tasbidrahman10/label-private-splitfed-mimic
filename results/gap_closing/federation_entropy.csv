@@ -1,0 +1,8 @@
+method,condition,client0_share,client1_share,client2_share,normalized_entropy
+Krum,"all (E1/E2/E4, 10 seeds)",1.0,0.0,0.0,-0.0
+"SNAS (analytic, clean all-accepted)",sample-count-proportional weights,0.3913,0.2542,0.3544,0.9857
+SNAS,baseline_clean:async_clean,0.3913,0.2542,0.3544,0.9857
+no-detection (async FedAvg),nodetect:E1_gradient_scaling,0.3913,0.2542,0.3544,0.9857
+no-detection (async FedAvg),nodetect:E2_free_rider,0.3913,0.2542,0.3544,0.9857
+no-detection (async FedAvg),nodetect:E4_attack_straggler,0.6062,0.3938,0.0,0.6102
+no-detection (async FedAvg),nodetect:E6_honest_straggler,0.6062,0.3938,0.0,0.6102

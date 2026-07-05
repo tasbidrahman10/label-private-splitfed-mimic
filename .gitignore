@@ -44,3 +44,6 @@ cloudflared*
 # But still exclude model checkpoints in results
 results/**/*.pth
 results/label_private_splitfed/server/server_metrics.jsonl
+
+# Raw append-only server logs (large; derived metrics in results/*.json|csv are committed instead)
+**/server_metrics*.jsonl

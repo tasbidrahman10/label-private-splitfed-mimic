@@ -1,0 +1,78 @@
+[
+  {
+    "method": "Krum",
+    "condition": "all (E1/E2/E4, 10 seeds)",
+    "per_client_share": {
+      "client0": 1.0,
+      "client1": 0.0,
+      "client2": 0.0
+    },
+    "normalized_entropy": -0.0,
+    "n_selection_events": 168
+  },
+  {
+    "method": "SNAS (analytic, clean all-accepted)",
+    "condition": "sample-count-proportional weights",
+    "per_client_share": {
+      "client0": 0.3913,
+      "client1": 0.2542,
+      "client2": 0.3544
+    },
+    "normalized_entropy": 0.9857
+  },
+  {
+    "method": "SNAS",
+    "condition": "baseline_clean:async_clean",
+    "per_client_share": {
+      "client0": 0.3913,
+      "client1": 0.2542,
+      "client2": 0.3544
+    },
+    "normalized_entropy": 0.9857,
+    "n_rounds": 100
+  },
+  {
+    "method": "no-detection (async FedAvg)",
+    "condition": "nodetect:E1_gradient_scaling",
+    "per_client_share": {
+      "client0": 0.3913,
+      "client1": 0.2542,
+      "client2": 0.3544
+    },
+    "normalized_entropy": 0.9857,
+    "n_rounds": 100
+  },
+  {
+    "method": "no-detection (async FedAvg)",
+    "condition": "nodetect:E2_free_rider",
+    "per_client_share": {
+      "client0": 0.3913,
+      "client1": 0.2542,
+      "client2": 0.3544
+    },
+    "normalized_entropy": 0.9857,
+    "n_rounds": 100
+  },
+  {
+    "method": "no-detection (async FedAvg)",
+    "condition": "nodetect:E4_attack_straggler",
+    "per_client_share": {
+      "client0": 0.6062,
+      "client1": 0.3938,
+      "client2": 0.0
+    },
+    "normalized_entropy": 0.6102,
+    "n_rounds": 100
+  },
+  {
+    "method": "no-detection (async FedAvg)",
+    "condition": "nodetect:E6_honest_straggler",
+    "per_client_share": {
+      "client0": 0.6062,
+      "client1": 0.3938,
+      "client2": 0.0
+    },
+    "normalized_entropy": 0.6102,
+    "n_rounds": 100
+  }
+]
