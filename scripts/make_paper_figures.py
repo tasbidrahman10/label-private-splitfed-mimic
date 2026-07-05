@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import glob
+import json
 from pathlib import Path
 
 import matplotlib
@@ -195,9 +196,51 @@ def fig_perround_auroc() -> None:
     _save(fig, "fig_perround_auroc")
 
 
+# ---------------------------------------------------------------------------
+# Figure: gate ablation (SNAS gate-on vs no-detection) across Exp 1-4
+# ---------------------------------------------------------------------------
+def fig_ablation() -> None:
+    """Grouped bars with error bars: SNAS (gate on) vs no-detection, n=10.
+    SNAS values from multiseed_summary.json; no-detection from gap_closing/nodetect.json."""
+    snas = {d["experiment"]: d for d in json.load((ROOT / "results" / "multiseed_summary.json").open())}
+    nod = {d["experiment"]: d for d in json.load((ROOT / "results" / "gap_closing" / "nodetect.json").open())}
+
+    exps = [
+        ("Exp 1\n(grad. scaling)", "E1_gradient_scaling"),
+        ("Exp 2\n(free rider)",    "E2_free_rider"),
+        ("Exp 3\n(attack+strag.)", "E4_attack_straggler"),
+        ("Exp 4\n(honest strag.)", "E6_honest_straggler"),
+    ]
+    snas_m = [snas[k]["mean_auroc"] for _, k in exps]
+    snas_s = [snas[k]["std_auroc"] for _, k in exps]
+    nod_m  = [nod[k]["mean_auroc"] for _, k in exps]
+    nod_s  = [nod[k]["std_auroc"] for _, k in exps]
+
+    x = np.arange(len(exps))
+    w = 0.36
+    fig, ax = plt.subplots(figsize=(6.4, 3.8))
+    b1 = ax.bar(x - w/2, snas_m, w, yerr=snas_s, capsize=3, label="SNAS (gate on)",
+                color=OKABE["blue"], edgecolor="white", linewidth=0.5)
+    b2 = ax.bar(x + w/2, nod_m, w, yerr=nod_s, capsize=3, label="No-detection (gate off)",
+                color=OKABE["vermil"], edgecolor="white", linewidth=0.5)
+    for bars, means in ((b1, snas_m), (b2, nod_m)):
+        for bar, m in zip(bars, means):
+            ax.text(bar.get_x() + bar.get_width()/2, m + 0.006, f"{m:.3f}",
+                    ha="center", va="bottom", fontsize=6.5, rotation=90, color="#333")
+    ax.set_xticks(x)
+    ax.set_xticklabels([e for e, _ in exps])
+    ax.set_ylabel("Mean AUROC (R8-10)")
+    ax.set_ylim(0.78, 1.0)
+    ax.set_title("Gate ablation: the anomaly gate helps under attack, costs nothing when clean")
+    ax.legend(fontsize=8, loc="lower left")
+    fig.tight_layout()
+    _save(fig, "fig_ablation")
+
+
 if __name__ == "__main__":
     print("Generating paper figures ->", FIGDIR)
     fig_attack_magnitude()
     fig_baseline_comparison()
     fig_perround_auroc()
+    fig_ablation()
     print("Done.")
