@@ -1,0 +1,9 @@
+{
+  "client_name": "surgical",
+  "client_id": 1,
+  "input_dim": 265,
+  "best_epoch": 33,
+  "best_val_loss": 0.3113412573128133,
+  "data_path": "data/processed/client1_surgical.csv",
+  "completed_at": "2026-08-17T13:11:21"
+}

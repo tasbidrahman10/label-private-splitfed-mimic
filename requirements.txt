@@ -1,6 +1,7 @@
 ipykernel
 pandas
 numpy
+scipy
 scikit-learn==1.6.1; python_version < "3.14"
 scikit-learn; python_version >= "3.14"
 matplotlib

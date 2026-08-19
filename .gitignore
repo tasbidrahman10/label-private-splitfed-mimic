@@ -47,3 +47,7 @@ results/label_private_splitfed/server/server_metrics.jsonl
 
 # Raw append-only server logs (large; derived metrics in results/*.json|csv are committed instead)
 **/server_metrics*.jsonl
+
+# Third-party published papers kept locally for reference. Not ours to
+# redistribute, and ~100 MB of the repo. Kept on disk, out of git.
+Reference papers/

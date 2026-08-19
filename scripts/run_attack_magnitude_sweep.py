@@ -45,9 +45,14 @@ ATTACKER_CID = 1
 
 E1_CONFIG = "configs/experiment_e1_gradient_scaling.yaml"
 
-# Mild -> extreme. 10.0 included as a sanity-check anchor against the known
-# on-record E1 result (should reproduce ~100% detection, ~0.9597 AUROC).
-SCALES = [1.2, 1.5, 2.0, 3.0, 5.0, 7.0, 10.0]
+# Sub-unit -> extreme. Scales below 1.0 shrink the submitted encoder instead of
+# inflating it, which is the evasion direction a reviewer raised: SNAS's norm
+# term uses |log(||theta_i|| / ||theta^g||)|, so it is symmetric about 1.0 in
+# theory and a 0.1x downscale should score the same as a 10x upscale. That
+# symmetry had never been tested empirically -- the sweep started at 1.2 -- so
+# the band below 1.0 is included here to confirm it holds rather than asserting
+# it. 10.0 remains the sanity-check anchor against the on-record E1 result.
+SCALES = [0.1, 0.3, 0.5, 0.8, 1.2, 1.5, 2.0, 3.0, 5.0, 7.0, 10.0]
 
 DEFAULTS = {
     "snas_beta":                 0.35,
@@ -76,16 +81,33 @@ def reset_server(overrides: dict) -> None:
     resp.raise_for_status()
 
 
-def extract_gate_metrics() -> dict:
-    """Detection rate + first-detection round for the attacker, from the tail
-    of server_metrics.jsonl (last 20 entries = 10 rounds x 2 clients for E1)."""
+def extract_gate_metrics(since: float) -> dict:
+    """Detection rate + first-detection round for the attacker in the run that
+    just finished.
+
+    Records are selected by timestamp rather than by a fixed tail of the file.
+    The previous fixed 20-line tail assumed "10 rounds x 2 clients", but E1 keeps
+    all three clients inside the submission window and therefore logs 30 gate
+    decisions per run, so the tail silently truncated the earliest rounds and
+    computed the detection rate over a subset of the attacker's active rounds.
+    """
     if not METRICS_FILE.exists():
         return {"detection_rate": float("nan"), "first_detection_round": None, "ever_quarantined": False}
-    lines = METRICS_FILE.read_text(encoding="utf-8").strip().splitlines()
-    gate_lines = [json.loads(l) for l in lines if "gate_decision" in l]
-    recent = gate_lines[-20:]
+
+    gate_lines = []
+    with METRICS_FILE.open(encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if "gate_decision" not in line:
+                continue
+            try:
+                e = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if e.get("timestamp", 0) >= since:
+                gate_lines.append(e)
+
     attacker_events = sorted(
-        [e for e in recent if e["client_id"] == ATTACKER_CID and e["round"] > 1],
+        [e for e in gate_lines if e["client_id"] == ATTACKER_CID and e["round"] > 1],
         key=lambda e: e["round"],
     )
     if not attacker_events:
@@ -113,6 +135,7 @@ EXPECTED_ROUNDS = 10
 def _attempt_once(scale: float) -> tuple[dict | None, str]:
     reset_server(DEFAULTS)
     time.sleep(SETTLE_SECONDS)
+    run_started = time.time()
 
     attack_config = json.dumps({str(ATTACKER_CID): {"type": "gradient_scaling", "params": {"scale": scale}}})
 
@@ -148,7 +171,7 @@ def _attempt_once(scale: float) -> tuple[dict | None, str]:
     final = auroc_values[-3:]
     mean_auroc = float(sum(final) / len(final))
     round1_drop = auroc_values[0] - auroc_values[1]
-    gate = extract_gate_metrics()
+    gate = extract_gate_metrics(run_started)
 
     return {
         "scale": scale,
@@ -183,13 +206,32 @@ def run_one(scale: float) -> dict:
     }
 
 
+def load_completed() -> list[dict]:
+    """Points already in the output CSV, so an interrupted sweep resumes."""
+    if not OUT_CSV.exists():
+        return []
+    with OUT_CSV.open(encoding="utf-8") as fh:
+        return [r for r in csv.DictReader(fh) if r.get("scale")]
+
+
 def main() -> None:
     OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
-    rows = []
-    for scale in SCALES:
+
+    rows = load_completed()
+    done = {float(r["scale"]) for r in rows}
+    todo = [s for s in SCALES if s not in done]
+    if done:
+        print(f"Resuming: {len(done)} scale(s) already recorded "
+              f"({sorted(done)}), {len(todo)} remaining.")
+    if not todo:
+        print("All scales already complete. Delete the CSV to force a rerun.")
+        return
+
+    for scale in todo:
         print(f"\n{'='*60}\nscale={scale}x\n{'='*60}")
         row = run_one(scale)
         rows.append(row)
+        rows.sort(key=lambda r: float(r["scale"]))
         print(f"  AUROC(r8-10)={row['mean_auroc_r8_10']}  DR={row['detection_rate']}  "
               f"first_detect_round={row['first_detection_round']}  quarantined={row['ever_quarantined']}")
 

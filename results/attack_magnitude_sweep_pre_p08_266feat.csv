@@ -1,0 +1,8 @@
+scale,mean_auroc_r8_10,round1_auroc_drop,detection_rate,first_detection_round,ever_quarantined,n_active_rounds
+1.2,0.964467,0.0009,0.0,,False,7
+1.5,0.963433,0.0017,0.0,,False,7
+2.0,0.9608,0.003,0.0,,False,7
+3.0,0.960033,0.0042,0.4286,4,False,7
+5.0,0.959567,0.0051,1.0,3,False,7
+7.0,0.959167,0.006,1.0,3,True,7
+10.0,0.959433,0.0071,1.0,3,True,7

@@ -22,10 +22,18 @@ def main() -> None:
     os.chdir(ROOT)
     config = load_yaml(args.config)
     app = create_app(args.config)
+    # Clients hold pooled keep-alive connections idle across long gaps: the
+    # async submission window (async_window_seconds, 25s by default) plus
+    # per-client delay sleeps. Uvicorn's 5s default keep-alive would close those
+    # connections underneath the client, which then reuses a dead socket and
+    # fails with ConnectionReset/ConnectionAborted. Keep connections alive well
+    # past the longest expected idle gap.
+    keep_alive = max(120, int(float(config.get("async_window_seconds", 25.0)) * 4))
     uvicorn.run(
         app,
         host=str(config.get("host", "0.0.0.0")),
         port=int(config.get("port", 8000)),
+        timeout_keep_alive=keep_alive,
     )
 
 

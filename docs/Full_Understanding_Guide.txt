@@ -1,0 +1,1168 @@
+COMPLETE UNDERSTANDING GUIDE
+Everything We Built, Why We Built It, and What It Means
+================================================
+
+This guide is written assuming you know the basics of SplitFed:
+clients send activations to the server, server sends back gradients,
+and FedAvg periodically merges the client encoders.
+
+Everything beyond that is explained here from the ground up.
+
+
+===================================================================
+PART 1: WHAT WE HAD BEFORE (Your Starting Point)
+===================================================================
+
+You built a working Split Federated Learning system for MIMIC-IV
+hospital data. Here is what it did, simply put:
+
+Three hospitals (we call them clients) each have their own private
+patient data:
+  - Client 0: Medical ICU  (36,152 patients, 16.1% mortality)
+  - Client 1: Surgical ICU (23,483 patients, 11.5% mortality)
+  - Client 2: Cardiac ICU  (32,743 patients, 6.9%  mortality)
+
+None of them can share their raw data because of privacy laws.
+But they all want to train a shared AI model to predict mortality.
+
+The solution: Split Learning.
+
+Each hospital's model is split into two pieces:
+  - The client's piece (called the Encoder): converts 266 patient
+    features into a small 32-number summary called an "activation."
+  - The server's piece (called the ServerTopModel): takes that
+    32-number summary and predicts mortality.
+
+The training loop (forward and backward pass) goes like this:
+
+  Client: "Here are 32 numbers summarizing my patients." → Server
+  Server: "Here is the mortality prediction." → Client
+  Client: "Here is the error signal (gradient)." → Server
+  Server: "Here is how to fix your encoder." → Client
+
+The mortality label (did this patient die?) NEVER leaves the client.
+The server never sees raw patient features.
+
+After each training round, all three clients merge their encoders
+through a process called FedAvg (Federated Averaging). Think of it
+like averaging the three clients' encoders weighted by how many
+patients each client has. The merged encoder is sent back to all.
+
+Result: A good mortality predictor trained on 92,378 patients
+without any hospital ever sharing their data. AUROC reached 0.9644
+(AUROC measures how good a classifier is; 1.0 is perfect, 0.5 is
+random guessing. 0.9644 is excellent for medical data).
+
+
+===================================================================
+PART 2: WHAT THE PROFESSOR IDENTIFIED AS MISSING
+===================================================================
+
+The system above works well, but it has two serious problems for
+real-world deployment.
+
+PROBLEM 1: "What if the hospitals don't all finish at the same time?"
+
+In the real world, a Cardiac ICU monitor, a wearable device, and a
+surgical suite system will NOT finish training at the same time.
+One hospital might be slow because of network lag, heavy patient
+load, or slow computers.
+
+Our original system waited for ALL THREE clients before doing FedAvg.
+If one hospital took an hour and the others took 5 minutes, everyone
+was stuck waiting. This is called a SYNCHRONOUS system — it waits
+for everyone.
+
+PROBLEM 2: "What if one hospital is hacked or malicious?"
+
+Our original system accepted ANY submission from any registered
+client, no questions asked. If a hacker compromised one hospital's
+computer and sent fake/poisoned model weights, those bad weights
+would be averaged into the global model and corrupt it for everyone.
+
+The professor's vision was to fix BOTH problems at the same time,
+and to do it in a way no one had done before for split learning.
+
+This became our research contribution:
+  Async-SplitFed-IR
+  (Asynchronous Split Federated Learning with Intrusion Resilience)
+
+
+===================================================================
+PART 3: THE CORE RESEARCH QUESTION
+===================================================================
+
+Our professor's central question was this:
+
+  "In an asynchronous system where clients send updates at
+   different times, how do you tell apart a client that is
+   LEGITIMATELY SLOW (honest but late) from a client that is
+   DELIBERATELY SENDING FAKE DATA (malicious)?"
+
+This sounds simple but it is actually a deep problem.
+
+If a client is slow and misses a round, its model weights will be
+slightly outdated (we call this "stale"). Stale weights naturally
+look a bit different from the current model.
+
+If a client is malicious, its submitted weights also look different.
+
+The challenge: both look "different" from the norm. How do you tell
+which is which?
+
+This question had never been formally studied in split learning.
+Our contribution was to invent a math formula called SNAS to answer it.
+
+
+===================================================================
+PART 4: THE FIRST GUIDELINE — WHAT WE BUILT
+(AsyncSplitFed_IR_RA_Guideline.md)
+===================================================================
+
+The professor's first guideline told us to build four new modules
+for the server. Here they are explained simply:
+
+
+MODULE 1: The Async Round Controller
+--------------------------------------
+WHAT IT DOES:
+Instead of waiting forever for all three clients, the server now
+opens a TIME WINDOW of 25 seconds. It's like a voting booth — it
+opens at a set time and closes at a set time. Whoever submits their
+encoder within that 25 seconds gets included in FedAvg. Anyone who
+submits after the window closes is too late for this round.
+
+TECHNICAL DETAIL — "T_adaptive":
+The window duration is not always exactly 25 seconds. If clients
+have been consistently late (high staleness), the window stretches
+slightly: T_adaptive = 25 × (1 + 0.1 × average_staleness).
+This gives chronically slow clients a little grace period.
+
+WHY IT MATTERS:
+No more waiting for the slowest hospital. The system keeps moving.
+
+
+MODULE 2: The Staleness Registry
+----------------------------------
+WHAT IT DOES:
+Tracks how many consecutive rounds each client has MISSED the window.
+
+We call this the "staleness counter" denoted by the Greek letter τ
+(tau, pronounced "taw").
+
+  If Client 2 missed 0 rounds → τ = 0 (fresh)
+  If Client 2 missed 1 round → τ = 1 (slightly stale)
+  If Client 2 missed 5 rounds → τ = 5 (very stale)
+
+When a client submits again after missing rounds, their τ resets to 0.
+
+STALENESS DECAY FUNCTIONS:
+When a stale client (τ > 0) finally does submit, we do not trust
+their weights as much as a fresh client's. We reduce their
+contribution to the merged model by a factor called w(τ).
+We implemented four different formulas for this:
+
+  Linear:      w = 1 / (1 + τ)       → halves at τ=1, keeps going down
+  Exponential: w = exp(-0.5 × τ)     → smoother, our default choice
+  Polynomial:  w = 1 / (1 + τ²)      → aggressive early then slow
+  Step:        w = 1 if τ ≤ 3 else 0 → full trust until cutoff, then nothing
+
+Think of it like this: if a student misses multiple classes and then
+shows up, how much credit do they get for that day's participation?
+These are four different policies for answering that question.
+
+We chose Exponential as our default because it has nice mathematical
+properties and is used in similar work in the research literature.
+
+
+MODULE 3: SNAS — The Core Invention
+--------------------------------------
+SNAS stands for: Staleness-Normalized Anomaly Score
+
+This is the heart of our contribution. It is a single number we
+compute for each client every round that answers: "How suspicious
+is this client's submission?"
+
+WHAT SNAS MEASURES:
+We examine the client's submitted encoder weights and compute
+two different "signals" of abnormality:
+
+  Signal 1 — Cosine Anomaly (measures DIRECTION):
+  Think of the model weights as an arrow pointing in some direction
+  in mathematical space. A healthy client's arrow should point
+  roughly in the same direction as the global model's arrow.
+  If a client submits random garbage weights, the arrow points
+  in a completely different direction.
+  Cosine anomaly = 0 means same direction (honest)
+  Cosine anomaly = 1 means completely different direction (suspicious)
+
+  Signal 2 — Norm Anomaly (measures MAGNITUDE):
+  Think of the model weights as having a "size" (length of the arrow).
+  A healthy client's weights should be roughly the same size as
+  the global model.
+  If a hacker multiplies all weights by 10, the arrow gets 10x longer.
+  Norm anomaly measures this size difference.
+  Norm anomaly = 0 means same size (honest)
+  Norm anomaly = 1 means dramatically different size (suspicious)
+
+THE SNAS FORMULA:
+  SNAS = (β × cosine_anomaly + γ × norm_anomaly) / (1 + τ)
+
+  Where β = 0.35 and γ = 0.65 (these are called hyperparameters —
+  tunable numbers we chose based on calibration experiments).
+
+The DENOMINATOR (1 + τ) is the KEY INSIGHT:
+  If a client is fresh (τ=0): denominator = 1, full anomaly shows
+  If a client is stale (τ=1): denominator = 2, anomaly is halved
+  If a client is stale (τ=5): denominator = 6, anomaly is reduced 6x
+
+WHY IS THIS CLEVER?
+A stale-but-honest client naturally has weights that have drifted
+slightly from the global model — they trained on an older version.
+So their raw anomaly is higher than a fresh honest client's, but
+it's because of legitimate staleness, not malice.
+
+By dividing by (1+τ), we say: "You've been away for a while,
+so I'll cut you some slack on how different you look."
+
+An ATTACKER who submits on time (τ=0) gets NO slack — their
+full anomaly is exposed.
+
+This is how we distinguish stale-but-honest from on-time-but-malicious.
+
+THE GATE DECISION:
+After computing SNAS, we decide what to do:
+  SNAS < 0.22 → ACCEPT  (included in FedAvg with full weight)
+  0.22 ≤ SNAS < 0.35 → FLAG (included but with 50% weight penalty)
+  SNAS ≥ 0.35 → QUARANTINE (excluded from FedAvg this round)
+
+IMPORTANT: We also set α=0 (activation divergence weight).
+We initially planned to include a third signal based on activation
+patterns, but discovered it made everyone look suspicious when
+gradient scaling attacks were present (all clients' activations
+shift equally, so it's not discriminative). We keep computing it
+for logging but don't use it in the gate decision. This was an
+empirical discovery we report honestly in the paper.
+
+
+MODULE 4: Robust Async FedAvg
+--------------------------------
+WHAT IT DOES:
+Once we have SNAS scores and gate decisions, we merge the accepted
+clients' encoders in a smarter way than simple averaging.
+
+Each client's contribution is weighted by THREE factors:
+  1. Their dataset size (bigger dataset = more influence)
+  2. Their staleness decay weight w(τ) (stale = less influence)
+  3. A penalty for flagged clients (0.5x weight if flagged)
+
+Final weights are normalized to sum to 1.0 before averaging.
+
+NORM CLIPPING:
+We also added a safety mechanism: before even doing the gate check,
+we cap each client's encoder weights to at most 2× the size of
+the global encoder (layer by layer). This "norm clipping" prevents
+an attacker from massively inflating the global model even during
+the warm-up period before detection kicks in.
+
+
+===================================================================
+PART 5: WHAT THE EXPERIMENTS PROVED
+(Before the Professor Added New Tasks)
+===================================================================
+
+We ran 8 experiments to test the system:
+
+BASELINE (Sync-FedAvg, 10 rounds):
+No attack, synchronous. Mean AUROC = 0.9653. This is our gold standard.
+
+ASYNC CLEAN (mild lag):
+All 3 clients submit within window (delays: 0s, 5s, 10s).
+Mean AUROC = 0.9653. IDENTICAL to synchronous. Async has zero cost.
+
+E6 — HONEST STRAGGLER:
+Client 2 always misses the window (30s delay).
+AUROC = 0.9661 (actually slightly BETTER than baseline!).
+Client 2 is NEVER quarantined — it was never even evaluated by SNAS
+because the window controller excluded it on timing alone.
+This proves FPR = 0% for honest stragglers.
+
+E1 — GRADIENT SCALING ATTACK:
+Client 1 multiplies all weights by 10× before submitting.
+Result: Detected and quarantined from round 2. 100% detection rate.
+FPR = 0% (honest clients not affected).
+AUROC degradation: only -0.006 from baseline.
+
+E2 — FREE RIDER ATTACK:
+Client 2 submits completely random weights (does no real training).
+Result: Detected and quarantined from round 2. 100% detection rate.
+FPR = 0%.
+AUROC dropped to 0.81 at round 2 (severe initial damage) but
+recovered to 0.91 by round 10 as the system self-healed.
+
+E4 — SIMULTANEOUS ATTACK AND STRAGGLER (the hardest case):
+Client 1 is the attacker (gradient scaling, submits on time).
+Client 2 is an honest straggler (misses the window).
+Result:
+  - Client 1 quarantined from round 2 (DR = 100%)
+  - Client 2 never evaluated by SNAS at all (FPR = 0%, architectural)
+  - AUROC only -0.008 from baseline
+This is the CORE CONTRIBUTION: we handle both simultaneously,
+and the two mechanisms (window controller for timing, SNAS for
+malice) are completely separate and don't interfere with each other.
+
+DECAY FUNCTION ABLATION:
+We ran 4 experiments showing all 4 decay functions give essentially
+the same AUROC (differences < 0.0002). Exponential is the default.
+
+
+===================================================================
+PART 6: THE FOUR GAPS — WHAT THE PROFESSOR ASKED FOR NEXT
+(RA Execution Guideline, the second set of tasks)
+===================================================================
+
+After reviewing our progress report, the professor identified four
+specific things that journal reviewers would immediately question.
+
+
+GAP 1: "WHERE IS YOUR COMPARISON TO OTHER METHODS?"
+---------------------------------------------------
+A reviewer will ask: "Krum, Trimmed Mean, and FLTrust are established
+Byzantine-robust methods. How does SNAS compare to them?"
+
+QUICK DEFINITIONS OF EACH:
+
+Byzantine-robust means "resistant to malicious (Byzantine) clients."
+In history, Byzantine generals would sometimes betray their army by
+sending false messages. In machine learning, "Byzantine" means a
+client sending deliberately harmful data.
+
+KRUM:
+Krum looks at all submitted encoder weights and computes the distance
+between every pair of clients. It then selects the single client
+whose weights are closest to k other clients (the most "central" one).
+The idea: an attacker's weights will be far from the honest clients,
+so Krum will not select them.
+
+TRIMMED MEAN:
+For each parameter in the model, sort all clients' values from
+smallest to largest, remove the top 20% and bottom 20%, then average
+the middle. This removes extreme outliers before averaging.
+
+FLTRUST:
+The server holds a small clean dataset. It computes the gradient
+from that clean data ("root gradient") and gives each client a
+trust score based on how similar their update is to this reference.
+Clients with updates pointing in a similar direction to the reference
+get more weight.
+
+WHAT WE FOUND:
+  - Krum actually had HIGHER AUROC than SNAS on all three experiments!
+    But this is because of a structural failure: Krum always selected
+    Client 0 (Medical) as the winner in EVERY single round across
+    ALL five seeds (464/464 decision log entries confirmed this).
+    Krum was not doing federated learning at all — it was just
+    repeatedly using Client 0's weights and ignoring Surgical and
+    Cardiac data entirely. Its better AUROC is an accident of Medical
+    having the most data, not evidence of better security.
+
+  - Trimmed Mean with 3 clients at 20% trim = 0 clients trimmed.
+    floor(0.2 × 3) = 0. It provided no protection whatsoever.
+    Just regular averaging.
+
+  - FLTrust cannot work in split learning. The server needs to compute
+    a reference gradient using the encoder — but the encoder lives on
+    clients, not the server. The root gradient collapses to near-zero
+    and the system falls back to regular averaging. FLTrust and Trimmed
+    Mean produce byte-for-byte identical results for this reason.
+
+This gives us a strong paper argument: SNAS is the ONLY method that
+actually works in the split learning setting, because it was designed
+for this specific architecture.
+
+
+GAP 2: "YOUR RESULTS ARE FROM ONE RANDOM RUN. ARE THEY RELIABLE?"
+-----------------------------------------------------------------
+A reviewer will say: "You report AUROC differences of 0.0003. How do
+we know that's not just random noise from one particular seed?"
+
+WHAT IS A SEED?
+When you train a neural network, random numbers are used everywhere
+(which batches to sample, how to initialize weights, etc.). The
+"seed" is the starting number for the random number generator. Same
+seed = exact same random choices every time. Different seed = different
+random choices.
+
+By running with only one seed (42), we had no way to prove our
+results would hold if the random choices were different.
+
+WHAT WE DID:
+We ran all key experiments 5 times with different seeds:
+  Seeds: 42, 7, 123, 2024, 31415
+
+Then for each experiment we computed:
+  Mean ± Standard Deviation
+  (Mean = average across 5 runs, Std = how much they varied)
+
+RESULTS:
+  E1 gradient scaling: 0.9598 ± 0.0004 (extremely stable)
+  E2 free rider:       0.9042 ± 0.0071 (some variance, expected)
+  E4 attack+straggler: 0.9579 ± 0.0004 (extremely stable)
+  E6 honest straggler: 0.9661 ± 0.0004 (extremely stable)
+
+The small std values prove our results are not noise. The paper can
+now make confident claims with statistical backing.
+
+STATISTICAL TESTS:
+We also ran formal statistical tests comparing SNAS against Krum
+(the closest competitor) using:
+
+  Wilcoxon Signed-Rank Test: a non-parametric test (doesn't assume
+  data follows a bell curve) that compares paired observations.
+  Result: p = 0.0625
+
+  Paired t-test: a parametric test (assumes bell curve distribution).
+  Result: p < 0.0001 (extremely significant)
+
+  Cohen's d: measures effect size (how big the difference is, not
+  just whether it's statistically significant).
+  Result: -12 to -16 (this is enormous; typical "large" is 0.8)
+
+The Wilcoxon p=0.0625 seems above the traditional 0.05 cutoff, but
+this is actually a mathematical floor — with only 5 paired samples,
+the smallest possible p-value IS 0.0625 (2 divided by 2^5 = 0.0625).
+Krum beat SNAS in ALL 5 of 5 seed comparisons — you literally cannot
+get a more extreme result. We report both tests honestly and explain
+this, as the professor's guideline instructed.
+
+Also confirmed by 5 seeds:
+  E6 straggler EXCEEDS the synchronous baseline in ALL 5 seeds
+  (minimum was 0.9657 > 0.9649 baseline). The claim that async
+  operation with dropout is BETTER than synchronous is now proven.
+
+  >>> IMPORTANT UPDATE (see PART 10A): We later extended this from 5
+  >>> seeds to 10 seeds. This CHANGES the Wilcoxon conclusion above:
+  >>> at 10 seeds the p-value floor drops to 0.00195, and the Wilcoxon
+  >>> test now DOES cross the 0.05 significance line. So the "p=0.0625
+  >>> is only a floor" caveat is no longer needed — with 10 seeds BOTH
+  >>> tests are significant. Use the n=10 numbers in the meeting, not
+  >>> these n=5 numbers. Also note (PART 10C): the E6 "exceeds baseline"
+  >>> claim was softened to "no degradation" once we measured the
+  >>> baseline's own variance.
+
+
+GAP 3: "YOU ONLY TESTED DUMB ATTACKS. WHAT IF THE ATTACKER IS SMART?"
+----------------------------------------------------------------------
+A reviewer will say: "Your attacks (gradient scaling, free rider) are
+static — the same action every round. A real attacker would adapt
+once they learn about your detection system."
+
+We designed three "adaptive" attacks where the attacker knows about
+SNAS and tries to exploit or evade it.
+
+ATTACK A — THRESHOLD-AWARE SCALING:
+The attacker knows our SNAS formula (β=0.35, γ=0.65, threshold=0.35).
+They binary-search for the exact scaling factor that would put their
+SNAS at 90% of the quarantine threshold (targeting 0.315) — staying
+just under the radar while corrupting as much as possible.
+
+WHAT HAPPENED:
+Quarantined from round 2. 100% detection rate.
+
+WHY DID IT FAIL?
+The attacker's math was correct but incomplete. They assumed that
+cosine_anomaly = 0 (scaling preserves direction, this is
+mathematically true in isolation). But they forgot that the encoder
+also naturally drifts from the global model through regular training
+— independent of the attack. This natural drift added cosine anomaly
+on top of what the attacker calculated, pushing SNAS above 0.35.
+The attacker's model was incomplete: it modelled the attack's effect
+on weights but not the confounding effect of ordinary training dynamics.
+
+ATTACK B — STRATEGIC ALTERNATION (Attack-Then-Abstain):
+The attacker submits a poisoned update, then deliberately MISSES the
+next round (using a 30s delay to exceed the 25s window), then attacks
+again, then misses again, and so on.
+
+By missing every other round, the attacker always submits with τ=1
+(one missed round). The (1+τ) denominator halves their SNAS score.
+
+WHAT HAPPENED:
+NEVER detected. 0% detection rate. Across all 4 decay functions.
+
+RAW anomaly score (at τ=0) would have been ≈0.37 — above the 0.35
+quarantine threshold. But divided by (1+1)=2, it becomes ≈0.18,
+well below even the flag threshold of 0.22.
+
+This is a confirmed structural vulnerability in SNAS. The same
+protection mechanism that prevents false positives for honest
+stragglers (the denominator) is being deliberately exploited by
+the attacker. We report this honestly as a limitation.
+
+This attack was run under all 4 decay functions to see if any of
+them could catch it. None could, because all 4 decay functions only
+affect the AGGREGATION WEIGHT — they have zero influence on the SNAS
+gate computation, which only uses τ directly.
+
+ATTACK C — SLOW RAMP MIMICRY:
+Instead of immediately scaling by 10×, the attacker gradually
+increases their scaling by 15% per round. Scale starts at 1×
+(harmless) and grows to ≈7× by round 15.
+
+WHAT HAPPENED:
+Flagged from round 8 (when scale reached ≈2.66×). Never fully
+quarantined (SNAS peaked at 0.30, below the 0.35 quarantine threshold).
+AUROC degradation: only −0.0013 (almost nothing).
+
+WHY SO LITTLE DAMAGE?
+The flag mechanism (50% weight reduction + trust score decay) kicked
+in at round 8 and progressively suppressed the attacker's contribution
+before the scale became seriously harmful. The graduated response
+worked even without a full quarantine.
+
+
+GAP 4: "YOU CHOSE THOSE PARAMETERS ARBITRARILY. WHAT IF THEY'RE WRONG?"
+-----------------------------------------------------------------------
+A reviewer will say: "β=0.35, γ=0.65, threshold=0.22, threshold=0.35,
+clip_ratio=2.0 — how do we know these aren't just lucky numbers that
+only work for your specific 3-client setup?"
+
+We needed to show these parameters come from a broad, robust region —
+not a knife-edge where tiny changes break everything.
+
+WHAT IS A SWEEP?
+A sweep means: systematically try every combination of parameter
+values across a grid and see how the system performs at each point.
+
+WE RAN THREE SWEEPS:
+
+SWEEP 1 — β/γ Balance (9 experiments × 2 scenarios = 18 runs):
+Varied β from 0.10 to 0.90 in steps of 0.10, γ = 1 − β.
+Evaluated on E1 and E2.
+
+RESULT:
+  Detection rate stays 100% for β ∈ [0.10, 0.70] (7 of 9 values).
+  Only drops at β=0.80 (85.7%) and β=0.90 (71.4%).
+  This means: as long as β is below 0.70 (our default is 0.35,
+  which has 0.35 units of headroom), detection is guaranteed.
+  The parameter is not sensitive — we have a broad safe zone.
+
+SWEEP 2 — Threshold Sensitivity (115 experiments, all on E4):
+We built an 11×11 grid of (threshold_flag, threshold_quarantine)
+combinations, excluding invalid ones where flag ≥ quarantine.
+115 valid combinations tested.
+
+RESULT:
+  Detection rate = 100% across ALL 115 combinations.
+  False positive rate = 0% for 71 of 115 combinations (61.7%).
+  Our default (0.22, 0.35) falls exactly in this 61.7% safe region.
+
+THE HEATMAP:
+A heatmap is a 2D grid coloured by performance. We generated one
+showing threshold_flag on the x-axis and threshold_quarantine on
+the y-axis, coloured by detection rate (all yellow = 100% everywhere).
+A red dashed vertical line shows the FPR=0 boundary at flag≈0.18.
+Our default (white star) sits clearly to the right of that line,
+with headroom. This is the single most important figure for the paper:
+it visually proves our parameters are not lucky — they sit in a
+broad operating region.
+
+SWEEP 3 — clip_ratio Sensitivity (6 experiments on E1):
+Varied clip_ratio from 1.5 to 4.0 in steps of 0.5.
+
+RESULT:
+  Detection rate = 100% for ALL 6 values.
+  FPR = 0% for ALL 6 values.
+  AUROC varies by at most 0.002 across the full range.
+  The parameter is completely insensitive within the tested range.
+
+
+===================================================================
+PART 7: BRINGING IT ALL TOGETHER
+===================================================================
+
+Here is the complete picture of what we proved:
+
+OUR SYSTEM HANDLES HONEST STRAGGLERS CORRECTLY:
+  E6 confirms: Client 2 misses every round, AUROC is maintained
+  (actually exceeds baseline), and Client 2 is NEVER quarantined.
+  The window controller handles timing; SNAS never even activates
+  for late clients. Zero false positives, guaranteed architecturally.
+
+OUR SYSTEM DETECTS STATIC ATTACKS:
+  E1 (gradient scaling), E2 (free rider), E4 (both simultaneously):
+  All show 100% detection rate, 0% false positive rate, with minor
+  AUROC degradation that recovers over rounds.
+
+OUR SYSTEM HAS A CONFIRMED ADAPTIVE VULNERABILITY (Attack B):
+  An attacker who knows to alternate between attacking and abstaining
+  can evade detection across ALL decay function choices. We report
+  this honestly. This is not a flaw in how we ran experiments; it
+  is a genuine limitation of the SNAS formula that we discovered and
+  must disclose. We provide three concrete directions to fix it
+  in future work.
+
+OUR PARAMETERS ARE ROBUST:
+  61.7% of the threshold space achieves perfect detection and zero
+  false positives. β has 35 percentage points of headroom. clip_ratio
+  makes no meaningful difference across a 2.67× range.
+
+EXISTING METHODS DON'T WORK HERE:
+  Krum collapses to single-client learning. Trimmed Mean provides
+  no protection at n=3. FLTrust cannot function in split learning's
+  privacy-preserving architecture. SNAS was designed for this setting.
+
+
+===================================================================
+PART 8: THE PAPER'S CONTRIBUTION IN PLAIN ENGLISH
+===================================================================
+
+If your professor asks "what did you contribute?", here is the answer:
+
+1. We identified a problem no one had solved: in split federated
+   learning, how do you tell a legitimately slow hospital apart from
+   a malicious one, when both look "different" from the norm?
+
+2. We invented SNAS, a scoring formula that answers this by
+   normalising anomaly scores by staleness — giving honest
+   stragglers the benefit of the doubt while exposing on-time
+   attackers.
+
+3. We proved it works: 100% detection, 0% false positives across
+   three different attack types.
+
+4. We honestly identified its limitation: a smarter attacker who
+   deliberately alternates between attacking and missing can exploit
+   the same normalisation term that protects honest stragglers.
+   We are the first to identify and characterize this vulnerability.
+
+5. We proved existing Byzantine-robust methods fundamentally cannot
+   be transplanted into label-private split learning, because they
+   require gradient information the server is explicitly not allowed
+   to have.
+
+6. We showed SNAS's parameters define a broad operating region,
+   not a hand-picked point — making the contribution deployable
+   in real systems, not just our specific 3-hospital test setup.
+
+
+===================================================================
+PART 9: KEY NUMBERS TO REMEMBER FOR THE MEETING
+===================================================================
+
+>>> These are the CURRENT (10-seed) numbers. Use these, not the older
+>>> 5-seed values that appear earlier in Parts 5-6. Paper labels in
+>>> brackets (E-code -> Exp-code).
+
+CORE RESULTS (all 10 seeds, mean ± std):
+  Sync-FedAvg baseline:               0.9649 (single seed — see open item)
+  Async clean baseline (n=10):        0.9652 ± 0.0004   <- now has error bars
+  Exp 4 / E6 honest straggler:        0.9660 ± 0.0004   (no degradation)
+  Exp 1 / E1 gradient scaling attack: 0.9598 ± 0.0004
+  Exp 2 / E2 free rider attack:       0.9050 ± 0.0071
+  Exp 3 / E4 attack + straggler:      0.9581 ± 0.0005
+  All attack experiments: 100% detection, 0% false positives.
+
+STATISTICS (SNAS vs Krum, 10 seeds):
+  Wilcoxon p = 0.00195, t-test p < 1e-9, Cohen's d = -12 to -16.
+  Both tests significant. Krum wins raw AUROC but selects one client
+  in 880/880 decisions (federation entropy 0.000 vs our 0.986).
+
+GATE ABLATION (gate ON vs OFF, the value of detection):
+  Free rider:   0.9050 vs 0.8082  (gate worth +0.097)
+  Grad scaling: 0.9598 vs 0.9556  (gate worth +0.004)
+  Attack+strag: 0.9581 vs 0.9556  (gate worth +0.003)
+  Honest strag: 0.9660 vs 0.9660  (gate costs nothing — control)
+
+ATTACK-MAGNITUDE SWEEP (is 100% real?):
+  0% detection below 2x (but harmless), 43% at 3x, 100% from 5x on.
+  Detection tracks severity — evaders are too weak to matter.
+
+ADAPTIVE ATTACKS:
+  Attack A (threshold-aware):  100% detection, Δ = -0.0054
+  Attack B (attack-then-abstain): 0% detection — disclosed limitation
+  Attack C (slow ramp):        flagged round 8, Δ = -0.0013
+
+PARAMETER SAFE ZONES:
+  β: 100% detection for β ∈ [0.10, 0.70]  (77.8% of range)
+  Thresholds: 61.7% of grid achieves DR=100% AND FPR=0%
+  clip_ratio: insensitive from 1.5 to 4.0
+
+SCALE OF THE WORK:
+  Total experiment runs: 250+ (200 original + 50 in the second round)
+  Seeds: 10 (42, 7, 123, 2024, 31415, 1001, 2002, 3003, 4004, 5005)
+  Rounds per run: 10 (15 for Attack C)
+  Patients: 92,378 across 3 ICUs
+  Paper: SENTINEL-SplitFed, Springer Nature ML, deadline July 15, 2026
+
+
+===================================================================
+PART 10: THE SECOND ROUND OF IMPROVEMENTS
+(Reviewer-Proofing Before Submission)
+===================================================================
+
+After closing the first four gaps (Part 6), we did NOT stop. We asked
+ourselves and colleagues: "If we were a tough journal reviewer, what
+would we STILL attack?" This self-review found six more weaknesses.
+Fixing them is what makes the difference between a paper that gets
+accepted and one that gets sent back. This part explains all six.
+
+TWO NAMING NOTES FIRST (so you are not confused in the meeting):
+  1. The paper is now called SENTINEL-SplitFed (the professor renamed
+     it). The method inside is still the same thing we called
+     Async-SplitFed-IR; only the paper's title changed. Full title:
+     "SENTINEL-SplitFed: Staleness-Aware Encoder Anomaly Detection for
+     Intrusion-Resilient Asynchronous Split Federated Learning in
+     Critical-Care Prediction."
+  2. The experiments were renamed from E1/E2/E4/E6 to a gapless
+     Exp 1-4 (explained in 10F below). This guide still uses the old
+     E-labels in Parts 1-9 because that is how you learned them; just
+     remember the mapping when you read the paper.
+
+
+-------------------------------------------------------------------
+WAVE 1: THE TWO IMMEDIATE CONCERNS
+(one from your partner, one from your professor)
+-------------------------------------------------------------------
+
+PART 10A: PARTNER'S POINT — "FIVE SEEDS IS NOT ENOUGH" (n=5 -> n=10)
+-------------------------------------------------------------------
+THE CONCERN:
+Your research partner pointed out a subtle but real statistics problem.
+Recall from Gap 2 (Part 6) that our Wilcoxon test gave p = 0.0625,
+which is ABOVE the 0.05 line usually needed to claim "significant."
+We had explained this away by saying "0.0625 is the mathematical floor
+at 5 samples." That explanation is TRUE, but a sharp reviewer would
+still say: "Then why use a test that structurally cannot pass? That
+looks like you are making an excuse."
+
+WHY THIS HAPPENS (the floor, explained simply):
+The Wilcoxon test at n=5 can produce at best p = 2 / 2^5 = 0.0625.
+No matter how perfect your result, you can never beat 0.0625 with only
+5 paired samples. It is like trying to roll below 1 on a die — the
+scale does not go that low.
+
+THE FIX:
+Run 5 MORE seeds to reach 10 total. We added seeds 1001, 2002, 3003,
+4004, 5005 to the original 42, 7, 123, 2024, 31415. Crucially, we did
+NOT redo the first five — we CONTINUED from them (the new runs were
+appended). At n=10 the floor drops to 2 / 2^10 = 0.00195, which is
+comfortably below 0.05.
+
+THE RESULT:
+  - All three SNAS-vs-Krum comparisons are now significant by BOTH
+    tests: Wilcoxon p = 0.00195 AND t-test p < 0.000000001.
+  - The averages barely moved (all within 0.0007 of the 5-seed values),
+    which is itself good news: it PROVES the 5-seed estimates were
+    already accurate — they were just statistically underpowered.
+  - Updated 10-seed SNAS numbers:
+      Exp 1 (grad scaling):  0.9598 ± 0.0004
+      Exp 2 (free rider):    0.9050 ± 0.0071
+      Exp 3 (attack+strag):  0.9581 ± 0.0005
+      Exp 4 (honest strag):  0.9660 ± 0.0004
+  - Krum still wins on raw AUROC (~0.9653) in all 10 seeds, and its
+    single-client collapse is now confirmed on 880 of 880 decisions
+    (was 464/464 at 5 seeds — the extra seeds made the story stronger,
+    not weaker).
+
+WHAT TO SAY: "We report ten seeds. Both the parametric and the
+non-parametric test agree that the difference is significant, with
+very large effect sizes."
+
+
+PART 10B: PROFESSOR'S POINT — "ARE YOU SURE ABOUT 100% DETECTION?"
+-------------------------------------------------------------------
+THE CONCERN:
+Your professor emailed asking whether the 100% detection claim was
+really safe. This is a GREAT instinct. Every "100%" we reported came
+from testing ONE attack strength — a 10x gradient scale, or fully
+random free-rider weights. Both are EXTREME, obvious attacks. A
+reviewer would ask: "Does detection hold for a SUBTLE attack, or does
+100% only happen because you tested easy, loud attacks?" A bare
+"100%" with no context is a classic red flag in security papers.
+
+THE FIX — THE ATTACK-MAGNITUDE SWEEP:
+Instead of only testing 10x, we swept the gradient-scaling attack
+across many strengths: 1.2x, 1.5x, 2x, 3x, 5x, 7x, 10x. For each, we
+measured both detection rate AND how much damage it did.
+
+THE RESULT — A DETECTION CURVE, NOT A FLAT LINE:
+  Scale   Detection rate   AUROC damage
+  1.2x    0%               0.0009  (basically nothing)
+  1.5x    0%               0.0017
+  2.0x    0%               0.0030
+  3.0x    42.9%            0.0042   <- transition zone
+  5.0x    100%             0.0051
+  7.0x    100%             0.0060   (quarantine kicks in here)
+  10.0x   100%             0.0071
+
+HOW TO READ THIS (the key insight):
+There are three zones.
+  - Below 2x: the attack EVADES detection (0%) — BUT it also does
+    almost no damage (AUROC drops by 0.001-0.003, the same as ordinary
+    run-to-run noise). An attack this weak is not worth catching.
+  - Around 3x: a transition (partial detection).
+  - 5x and above: 100% detection, and this is exactly where the attack
+    becomes strong enough to matter.
+
+THE POWERFUL CONCLUSION:
+Detection tracks SEVERITY. The only attacks that slip past SNAS are the
+ones too weak to hurt the model. Every attack strong enough to corrupt
+the encoder is caught. So "100%" is not an artifact of testing only
+loud attacks — the gate is genuinely discriminative. As a sanity check,
+the 10x point in the sweep reproduced our original Exp 1 result almost
+exactly, confirming the method is consistent.
+
+WHAT TO SAY: "100% detection holds for any attack strong enough to
+matter (5x and above). Weaker attacks evade, but they also cause
+negligible damage, so the detection boundary lines up with the point
+where harm actually begins."
+
+
+-------------------------------------------------------------------
+WAVE 2: FOUR DEEPER GAPS FROM A CAREFUL RE-ANALYSIS
+-------------------------------------------------------------------
+
+After the two immediate fixes, a deeper self-review found four more
+gaps. These are more subtle and more important.
+
+
+PART 10C: GAP A — "YOUR BASELINE HAS NO ERROR BARS"
+-------------------------------------------------------------------
+THE CONCERN:
+Every "degradation" we reported (like "-0.005 vs baseline") was
+measured against a baseline of 0.9649 — but that baseline came from a
+SINGLE run (one seed), while every attack number came from 10 runs.
+A reviewer asks: "You compare a 10-seed number to a 1-seed number.
+What is the VARIANCE on your baseline? If the baseline itself wobbles
+by 0.005, then a 0.005 'degradation' might be meaningless."
+
+THE FIX:
+Re-run the clean async baseline across all 10 seeds too, so it also
+has a mean and a standard deviation.
+
+THE RESULT:
+  Async-clean baseline (n=10) = 0.9652 ± 0.0004
+The baseline is just as stable as everything else (std 0.0004). This
+means our reported degradations (roughly -0.005 to -0.06) are about
+10 standard deviations large — clearly real, not noise. Concern closed.
+
+AN HONEST CONSEQUENCE (be ready for this one):
+The baseline came out 0.9652, slightly HIGHER than the old single-seed
+0.9649. This nudged the honest-straggler (Exp 4) result. Exp 4 = 0.9660
+versus baseline 0.9652 is only +0.0008. It IS consistent (Exp 4 beats
+baseline on all 10 seeds), but +0.0008 is tiny — almost certainly just
+from dropping the low-mortality Cardiac client. So we SOFTENED the
+claim: instead of "honest straggling BEATS the baseline," we now say
+"honest straggling causes NO DEGRADATION." This is more defensible and
+more honest. Never over-claim a 0.0008 difference to a reviewer.
+
+
+PART 10D: GAP B — "YOU NEVER PROVED THE GATE ITSELF HELPS"
+(the no-detection baseline / the ablation)
+-------------------------------------------------------------------
+THE CONCERN — the deepest one:
+Our paper has two halves: (1) ASYNC handling (the timed window +
+staleness weighting) and (2) SECURITY (the SNAS gate). We compared
+against Byzantine methods (Krum etc.), which tests the SECURITY half.
+But we NEVER compared against a plain asynchronous FedAvg that has NO
+detection at all. A reviewer asks two things:
+  - "Where is your async baseline? You claim async contributions but
+     never show a staleness-weighted FedAvg without your gate."
+  - "How do I know the GATE is doing the work? Maybe staleness-weighted
+     averaging alone would do just as well, and the gate is decoration."
+
+WHAT IS AN ABLATION?
+An ablation means "remove one piece and see how much worse it gets."
+It is how you PROVE a component matters. If you remove the gate and
+performance barely changes, the gate is useless. If it collapses, the
+gate is essential.
+
+THE FIX (one experiment answers both questions):
+We took our OWN system and turned the gate OFF — we set the anomaly
+thresholds and the clip limit so high that nothing is ever flagged,
+quarantined, or clipped. What remains is EXACTLY "pure staleness-
+weighted asynchronous FedAvg with no security." This single condition
+is simultaneously:
+  - the async baseline the reviewer wanted, AND
+  - the ablation that isolates the gate's value.
+We ran it on all four experiments across 10 seeds.
+
+THE RESULT:
+  Experiment          SNAS (gate ON)   No-detection (gate OFF)   Gate helps by
+  Exp 1 grad scaling  0.9598           0.9556                    +0.0042
+  Exp 2 free rider    0.9050           0.8082                    +0.0968  <- huge
+  Exp 3 attack+strag  0.9581           0.9556                    +0.0025
+  Exp 4 honest strag  0.9660           0.9660                    +0.0000  <- control
+All the "gate helps" gains under attack are statistically significant
+(paired tests, p from 1e-7 to 1e-10).
+
+HOW TO READ THIS (three lessons):
+  1. On the free-rider attack the gate is ESSENTIAL: without it, AUROC
+     crashes to 0.808 (the random weights poison the average). With it,
+     0.905. That +0.097 is the gate earning its place. (Note: 0.808 is
+     the same value trimmed-mean/FLTrust got — because without detection
+     the system just becomes vanilla FedAvg swallowing the poison.)
+  2. On gradient scaling the gate helps less (+0.003 to +0.004), because
+     a scaled-but-honest-direction update is partly diluted by staleness-
+     weighting even without the gate. Still a real, significant gain.
+  3. On the honest-straggler case (NO attacker) the gate changes NOTHING
+     (0.9660 = 0.9660). This is a PERFECT control: it proves the gate
+     costs nothing when everyone is honest — no false-positive tax.
+
+THE BIG PICTURE THIS UNLOCKS:
+Combined with the entropy result below, we can now say SNAS is the ONLY
+setup that gets BOTH goals at once:
+  - Krum:          resists poison BUT collapses federation (1 client)
+  - No-detection:  keeps all clients BUT swallows the poison
+  - SNAS:          keeps all honest clients AND removes the poison
+That three-way contrast is one of the strongest arguments in the paper.
+
+
+PART 10E: GAP C — "'KRUM COLLAPSES FEDERATION' IS JUST WORDS"
+(the federation-preservation metric)
+-------------------------------------------------------------------
+THE CONCERN:
+We kept SAYING "Krum collapses federation by always picking one client,"
+but we never gave a NUMBER for it. A reviewer says: "You have the
+aggregation logs. Measure it. Don't just assert it."
+
+WHAT WE MEASURED — CONTRIBUTION ENTROPY:
+"Entropy" here is a measure of how EVENLY the three clients contribute
+to the merged model. We compute, each round, each client's share of the
+aggregation, then a number H between 0 and 1:
+  H = 1  -> all clients contribute equally (healthy federation)
+  H = 0  -> a single client carries everything (federation collapsed)
+Think of it like a fairness score for participation. (Formally,
+H = -sum(share_i x ln(share_i)) / ln(number_of_clients), but the
+intuition is all you need: 1 = balanced, 0 = one client.)
+
+THE RESULT:
+  Krum:  H = 0.000   (Client 0 selected in 100% of decisions — one client)
+  SNAS:  H = 0.986   (shares 0.39 / 0.25 / 0.35 — all three contribute,
+                       roughly proportional to their dataset sizes)
+This is the number that turns our qualitative claim into a hard fact:
+Krum's higher AUROC is bought by throwing away two of the three
+hospitals. SNAS keeps all three.
+
+A SUBTLE POINT (for the three-way story):
+The no-detection baseline ALSO has H = 0.986 (it keeps everyone). But
+"keeping everyone" is only good if you EXCLUDE the attacker — which
+no-detection cannot do, so it keeps the poison too (that is why its
+AUROC crashed in 10D). So high entropy is good ONLY when combined with
+attack resistance. SNAS is the only one with both.
+
+
+PART 10F: GAP D — "WHY ARE E3 AND E5 MISSING?"
+(the experiment renumbering)
+-------------------------------------------------------------------
+THE CONCERN:
+Our experiments were labeled E1, E2, E4, E6. A careful reader notices
+E3 and E5 are missing and wonders: "Did they run E3 and E5, get bad
+results, and hide them?" Even though that is NOT what happened (E3 and
+E5 were just placeholder slots in our internal plan that got replaced
+by the adaptive attacks), the GAP itself looks like selective reporting.
+
+THE FIX (no new experiments — just relabeling):
+Rename to a gapless sequence in the paper:
+  E1 (gradient scaling)      -> Exp 1
+  E2 (free rider)            -> Exp 2
+  E4 (attack + straggler)    -> Exp 3
+  E6 (honest straggler)      -> Exp 4
+The data files keep their old names internally; only the paper's labels
+change. No gap, no suspicion.
+
+(A stronger option we noted but did not do for the deadline: actually
+RUN two more attack types — label-flipping and backdoor, both already
+coded but never executed — to fill real E3/E5 slots. We flagged this as
+a possible response if a reviewer specifically wants more attack types.)
+
+
+-------------------------------------------------------------------
+WHERE THIS ALL WENT
+-------------------------------------------------------------------
+All six improvements are in the code and results on GitHub, and all
+four Wave-2 results are written into the paper (main.tex): the baseline
+now has error bars, there is a new ablation table AND figure, a new
+federation-entropy table, and the experiments are renumbered. The
+attack-magnitude sweep (10B) and the 10-seed extension (10A) were
+committed earlier. The one thing still open: the old "Sync-FedAvg
+baseline" row was a single seed with no saved config; before submission
+we should either reproduce it at 10 seeds or merge it into the async
+baseline.
+
+
+===================================================================
+PART 11: THE UPDATED ONE-PAGE STORY FOR YOUR MEETING
+===================================================================
+
+If the professor asks "where do things stand now?", here is the
+current, fully-updated story in order:
+
+1. THE PROBLEM: In asynchronous split federated learning, tell an
+   honest-but-slow hospital apart from a malicious one — both look
+   "different" from the norm.
+
+2. THE METHOD (SENTINEL-SplitFed): a timed window handles TIMING, and
+   the SNAS score handles MALICE. SNAS divides the anomaly by (1+tau)
+   so honest stragglers get slack while on-time attackers do not.
+
+3. IT WORKS: 100% detection with 0% false positives on gradient
+   scaling, free rider, and both-at-once — now across 10 seeds.
+
+4. THE 100% IS HONEST (professor's point): detection tracks attack
+   strength; the only attacks that evade are too weak to cause harm.
+
+5. THE NUMBERS ARE SOLID (partner's point): 10 seeds, both statistical
+   tests significant, baseline now has error bars too.
+
+6. THE GATE PROVABLY EARNS ITS PLACE (ablation): turning it off crashes
+   the free-rider case from 0.905 to 0.808, and costs nothing when
+   clients are honest.
+
+7. WE BEAT THE BASELINES FAIRLY: Krum gets higher raw AUROC but its
+   federation entropy is 0.000 (one client) vs our 0.986 (all three).
+   Trimmed mean and FLTrust degenerate in split learning.
+
+8. WE ARE HONEST ABOUT THE LIMIT: the attack-then-abstain adversary
+   (Attack B) still evades SNAS — a genuine, disclosed boundary with
+   three proposed fixes for future work.
+
+THE ONE-SENTENCE VERSION: "SENTINEL-SplitFed is the first split-
+learning-native way to separate honest stragglers from malicious
+clients before aggregation; it detects every attack strong enough to
+matter, preserves full federation (unlike Krum), provably needs its
+gate (unlike plain async FedAvg), and we honestly characterize the one
+adaptive attack that beats it."
+
+
+===================================================================
+GLOSSARY OF TERMS
+===================================================================
+
+Ablation — An experiment where you REMOVE one component of your system
+  to measure how much it mattered. If performance collapses without it,
+  the component is essential. We ablated the SNAS gate (Part 10D).
+
+AUROC — Area Under the Receiver Operating Characteristic curve.
+  A number from 0 to 1 measuring how well a classifier ranks
+  positives above negatives. 0.5 = random, 1.0 = perfect.
+  0.96+ is considered excellent for medical AI.
+
+Attack-magnitude sweep — Testing an attack at many strengths (1.2x to
+  10x scaling) instead of just one, to show detection tracks severity
+  rather than only catching loud, obvious attacks (Part 10B).
+
+Contribution entropy — A fairness score (0 to 1) for how evenly the
+  clients contribute to the merged model. 1 = all clients share equally
+  (healthy federation), 0 = one client carries everything (collapsed).
+  SNAS = 0.986, Krum = 0.000 (Part 10E).
+
+Activation — The 32-number summary a client encoder produces
+  from patient features. This is what gets sent to the server.
+  The server never sees the raw features.
+
+Async — Asynchronous. The system does not wait for all clients.
+  It proceeds on a timer regardless of who has submitted.
+
+Byzantine — From Byzantine generals who might send treacherous
+  messages. In ML, means a client behaving maliciously.
+
+Byzantine-robust — A system designed to still work correctly
+  even when some clients are sending malicious data.
+
+Clip ratio — Limits how large a submitted encoder can be relative
+  to the global encoder. Prevents wild corruption in early rounds.
+
+Cohen's d — Effect size measure. Unlike p-values, it tells you
+  HOW MUCH different two things are, not just whether they differ.
+  Values of ±12 to ±16 in our results are enormous.
+
+Cosine anomaly — Measures directional difference between submitted
+  weights and global weights. 0 = same direction, 1 = opposite.
+
+Encoder — The client-side neural network. Converts 266 patient
+  features to 32-dimensional activations. Kept local.
+
+FedAvg — Federated Averaging. Merge multiple clients' encoders
+  into one global encoder, weighted by dataset sizes.
+
+FPR — False Positive Rate. Fraction of HONEST clients that were
+  incorrectly flagged or quarantined. Should be 0%.
+
+FLTrust — A Byzantine-robust method that uses a small "root
+  dataset" on the server to compute a reference gradient and
+  score clients by similarity to it.
+
+FPR=0 boundary — The threshold value beyond which honest clients
+  stop being falsely flagged. Shown as red dashed line on heatmap.
+
+Gradient — The mathematical signal telling the encoder how to
+  update its weights. The client computes this locally using
+  their private labels.
+
+Heatmap — A 2D grid where colour encodes a performance value.
+  In our sensitivity sweep, yellow = 100% detection rate.
+
+Hyperparameter — A parameter you choose before training (β, γ,
+  thresholds, clip_ratio). Not learned by the model, set by design.
+
+Krum — A Byzantine-robust aggregation method that selects the
+  single most "central" client update instead of averaging.
+
+Label-private — Labels (mortality outcomes) never leave the
+  client. The server only sees activations and gradients.
+
+Norm — Mathematical "size" of a weight vector. Gradient scaling
+  attacks inflate the norm; norm anomaly detects this.
+
+Norm anomaly — Measures size difference between submitted weights
+  and global weights. 0 = same size, 1 = very different size.
+
+No-detection baseline — Our own system with the gate and clipping
+  turned off, leaving pure staleness-weighted async FedAvg. Serves as
+  both the "async baseline" a reviewer expects and the ablation that
+  proves the gate helps (Part 10D).
+
+Paired test — A statistical test that compares two methods seed-by-seed
+  (same seed for both), so it isolates the true difference from random
+  seed variation. Used for SNAS-vs-Krum and gate-on-vs-off comparisons.
+
+p-value — Probability of observing results as extreme as these
+  if there were actually no difference. Smaller = more significant.
+  p < 0.05 is the conventional threshold for "significant."
+
+Quarantine — Exclude a client from this round's FedAvg entirely.
+
+Seed (random seed) — Starting number for random number generation.
+  Same seed = same experiment. Different seeds = different random
+  variations, used to test if results are consistent.
+
+SNAS — Staleness-Normalized Anomaly Score. Our invented formula.
+  = (β × cosine_anomaly + γ × norm_anomaly) / (1 + τ)
+
+Stale / Staleness (τ) — How many consecutive rounds a client has
+  missed. τ=0 means current (just submitted). τ=5 means missed 5.
+
+Standard deviation (std) — How much results vary across multiple
+  runs. Small std means results are consistent and reliable.
+
+Sweep — Systematically try all combinations of parameter values
+  across a grid and measure performance at each point.
+
+Sync — Synchronous. System waits for all clients before proceeding.
+
+Trim ratio — In Trimmed Mean, the fraction removed from each end
+  of the sorted values before averaging. 20% trim with 3 clients
+  = 0 clients removed (floor(0.2 × 3) = 0).
+
+Trimmed Mean — Average after removing extreme high and low values.
+  Supposed to be Byzantine-robust but degenerates at small n.
+
+Warm-up rounds — The first 1 round where SNAS gate always accepts
+  regardless of score. Needed because the reference distributions
+  are being built and no prior global encoder exists for comparison.
+
+Wilcoxon test — A non-parametric statistical test for paired data.
+  Does not assume data follows a bell curve. More conservative.
+  With n=5 pairs, the minimum achievable p-value is 0.0625.

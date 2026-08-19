@@ -1,0 +1,4 @@
+{"round": 1, "client_id": 5, "batches": 20, "avg_local_loss": 0.8983481734991073, "activation_bytes": 163840, "gradient_bytes": 163840}
+{"round": 1, "client_id": 5, "val_batches": 47, "auroc": 0.9567471485705821, "auprc": 0.7538940813195247, "f1": 0.1055234954657873}
+{"round": 2, "client_id": 5, "batches": 20, "avg_local_loss": 0.801113823056221, "activation_bytes": 163840, "gradient_bytes": 163840}
+{"round": 2, "client_id": 5, "val_batches": 47, "auroc": 0.9532826412547936, "auprc": 0.7662954228844192, "f1": 0.16557161629434955}

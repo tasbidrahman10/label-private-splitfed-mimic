@@ -1,0 +1,13 @@
+client_id: 4
+client_name: ccu
+data_path: data/processed_n6/client4_ccu.csv
+model_dir: models/client4_ccu
+results_dir: results/label_private_splitfed/client4_ccu
+target_col: mortality
+batch_size: 64
+lr_encoder: 0.0001
+weight_decay: 0.001
+seed: 42
+input_dim: 265
+encoder_hidden_dim: 64
+max_pos_weight: 5.0

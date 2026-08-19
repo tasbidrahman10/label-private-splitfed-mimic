@@ -5,6 +5,8 @@ from typing import Any
 
 import requests
 import torch
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from sfl.common.serialization import (
     base64_to_state_dict,
@@ -14,6 +16,18 @@ from sfl.common.serialization import (
 
 
 class SFLServerClient:
+    """HTTP client for the split-learning server.
+
+    Requests go through a persistent ``requests.Session`` rather than
+    module-level ``requests.request`` calls. A training run issues roughly
+    ``rounds x batches x 2`` requests (forward + backward per batch), which is
+    ~12k for a 10-round/200-batch run. Without keep-alive each of those opens
+    and closes a TCP connection, and every closed socket occupies an ephemeral
+    port in TIME_WAIT for ~120s on Windows — enough to exhaust the ~16k dynamic
+    port range within a run or two and fail with WinError 10048. Pooling keeps
+    the whole run on a handful of reused connections.
+    """
+
     def __init__(self, server_url: str, auth_token: str = "", timeout: float = 120.0) -> None:
         self.server_url = server_url.rstrip("/")
         self.timeout = timeout
@@ -21,11 +35,41 @@ class SFLServerClient:
         if auth_token:
             self.headers["Authorization"] = f"Bearer {auth_token}"
 
+        self._session = requests.Session()
+        self._session.headers.update(self.headers)
+        # A pooled connection can still go stale if the server closes it while
+        # idle (long async windows / delay sleeps). Retrying connection-level
+        # failures re-establishes the socket transparently instead of failing the
+        # whole run. allowed_methods=False so POSTs retry too: these errors occur
+        # before the request is delivered, so replaying it is safe. read=0 keeps
+        # us from replaying a request the server may already have processed.
+        retry = Retry(
+            total=4,
+            connect=4,
+            read=0,
+            status=0,
+            backoff_factor=0.3,
+            allowed_methods=False,
+        )
+        # pool_maxsize above the number of concurrent callers keeps urllib3 from
+        # discarding (and thus re-opening) connections when the pool is full.
+        adapter = HTTPAdapter(pool_connections=4, pool_maxsize=32, max_retries=retry)
+        self._session.mount("http://", adapter)
+        self._session.mount("https://", adapter)
+
+    def close(self) -> None:
+        self._session.close()
+
+    def __enter__(self) -> "SFLServerClient":
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        self.close()
+
     def _request(self, method: str, path: str, **kwargs) -> dict[str, Any]:
-        response = requests.request(
+        response = self._session.request(
             method,
             f"{self.server_url}{path}",
-            headers=self.headers,
             timeout=self.timeout,
             **kwargs,
         )

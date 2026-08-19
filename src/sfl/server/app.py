@@ -143,7 +143,22 @@ async def _process_round_baseline(
         elif aggregator == "fltrust":
             # Compute root gradient: run root data through global encoder + server model
             root_gradient = _compute_fltrust_root_gradient(state)
-            new_flat = fltrust_aggregate(flat_submissions, root_gradient, sample_counts)
+            ref_encoder = state.global_encoder or state.prev_global_encoder
+            if ref_encoder is not None:
+                # FLTrust trusts *updates*, not absolute weights — comparing raw
+                # submitted weights to the root gradient is dominated by the
+                # shared base model both start from. Aggregate deltas against
+                # the reference encoder, then add back to reconstruct the
+                # new global weights.
+                ref_flat = state_dict_to_flat(ref_encoder)
+                flat_deltas = {cid: w - ref_flat for cid, w in flat_submissions.items()}
+                agg_delta = fltrust_aggregate(flat_deltas, root_gradient, sample_counts)
+                new_flat = ref_flat + agg_delta
+            else:
+                # First round, no reference encoder yet — matches
+                # fltrust_aggregate's own zero-root-gradient fallback.
+                import numpy as np
+                new_flat = np.stack(list(flat_submissions.values())).mean(axis=0)
 
         if new_flat is not None:
             new_global = flat_to_state_dict(new_flat, ref_sd, device=state.device)
@@ -185,26 +200,30 @@ def _compute_fltrust_root_gradient(state: ServerState) -> "np.ndarray":
     import numpy as np
     from sfl.common.models import ClientEncoder
 
-    if state.fltrust_root_data is None or state.global_encoder is None:
-        # No root data or no global encoder yet — return zero vector matching
-        # the encoder parameter count as a neutral reference
+    # global_encoder is cleared to None while a round's submission window is
+    # open (app.py: "clear so clients get 404 during window") and this function
+    # runs after that window closes — so state.global_encoder is None on every
+    # single call. Falling back to prev_global_encoder (the last completed
+    # round's encoder) instead of a hardcoded None check is what makes the root
+    # gradient non-degenerate; without it root_norm is always ~0 and
+    # fltrust_aggregate always takes its "falling back to uniform average" path.
+    ref_encoder = state.global_encoder or state.prev_global_encoder
+    if state.fltrust_root_data is None or ref_encoder is None:
+        # No root data or no reference encoder yet (first round) — return zero
+        # vector matching the encoder parameter count as a neutral reference
         param_count = sum(
-            v.numel() for v in (state.global_encoder or {}).values()
+            v.numel() for v in (ref_encoder or {}).values()
             if isinstance(v, __import__("torch").Tensor) and v.is_floating_point()
         )
         return np.zeros(param_count or 1, dtype=np.float32)
 
     import torch
-    from sfl.common.config import load_yaml
-    from sfl.common.config import repo_root
 
-    cfg_path = repo_root() / "configs" / "clients" / "client0_medical.yaml"
-    cfg = load_yaml(str(cfg_path))
     encoder = ClientEncoder(
-        input_dim=int(cfg.get("input_dim", 266)),
-        hidden_dim=int(cfg.get("encoder_hidden_dim", 64)),
+        input_dim=int(state.config.get("input_dim", 265)),
+        hidden_dim=int(state.config.get("encoder_hidden_dim", 64)),
     ).to(state.device)
-    encoder.load_state_dict(state.global_encoder)
+    encoder.load_state_dict(ref_encoder)
     encoder.train()
 
     all_grads = []
@@ -225,10 +244,22 @@ def _compute_fltrust_root_gradient(state: ServerState) -> "np.ndarray":
         encoder.zero_grad()
         activation.backward(act_grad)
 
+        # Walk state_dict() (not parameters()) so root_gradient's layout matches
+        # state_dict_to_flat's — that includes BatchNorm's running_mean/running_var
+        # buffers, which have no gradient and are padded with zeros here. Without
+        # this, root_gradient (params-only) and the submitted deltas (full
+        # state_dict) have different lengths and the cosine dot product in
+        # fltrust_aggregate raises a shape mismatch.
+        named_grads = {name: p.grad for name, p in encoder.named_parameters()}
         grads = []
-        for p in encoder.parameters():
-            if p.grad is not None:
-                grads.append(p.grad.detach().cpu().float().numpy().ravel())
+        for key, tensor in encoder.state_dict().items():
+            if not tensor.is_floating_point():
+                continue
+            grad = named_grads.get(key)
+            if grad is not None:
+                grads.append(grad.detach().cpu().float().numpy().ravel())
+            else:
+                grads.append(np.zeros(tensor.numel(), dtype=np.float32))
         if grads:
             all_grads.append(np.concatenate(grads))
         encoder.zero_grad()
@@ -426,7 +457,9 @@ def create_app(config_path: str = "configs/server.yaml") -> FastAPI:
             server_state.prev_global_encoder = server_state.global_encoder  # save for SNAS
             server_state.global_encoder = None  # clear so clients get 404 during window
             server_state.async_controller.open_round_immediately()
-            asyncio.create_task(_run_async_round(server_state))
+            # Keep a handle so /admin/reset can cancel an in-flight round instead
+            # of letting it wake up against freshly reset state.
+            server_state.round_task = asyncio.create_task(_run_async_round(server_state))
         return {"status": "opened", "round": server_state.async_controller.round_number}
 
     @app.post("/fedavg/submit_encoder", dependencies=[Depends(require_token)])
@@ -468,6 +501,22 @@ def create_app(config_path: str = "configs/server.yaml") -> FastAPI:
         Used by automated multi-seed and sensitivity sweep scripts to avoid
         manual server restarts between experiment runs.
         """
+        # A round opened by the previous experiment may still be sleeping out its
+        # submission window. If it wakes after the reset it aggregates against
+        # empty registries (KeyError on sample_counts) and tears down the
+        # connections the next experiment is already using, so cancel it first.
+        # Cancelled outside the lock because _run_async_round acquires it.
+        task = getattr(server_state, "round_task", None)
+        if task is not None and not task.done():
+            logger.info("Reset requested while round %d in flight — cancelling it.",
+                        server_state.current_round)
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+        server_state.round_task = None
+
         async with server_state.lock:
             server_state.reset(request.config_overrides or None)
         return {

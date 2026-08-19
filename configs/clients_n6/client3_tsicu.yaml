@@ -1,0 +1,13 @@
+client_id: 3
+client_name: tsicu
+data_path: data/processed_n6/client3_tsicu.csv
+model_dir: models/client3_tsicu
+results_dir: results/label_private_splitfed/client3_tsicu
+target_col: mortality
+batch_size: 64
+lr_encoder: 0.0001
+weight_decay: 0.001
+seed: 42
+input_dim: 265
+encoder_hidden_dim: 64
+max_pos_weight: 5.0

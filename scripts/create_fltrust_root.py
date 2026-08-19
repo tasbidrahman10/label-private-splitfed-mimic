@@ -21,19 +21,16 @@ from sklearn.model_selection import train_test_split
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from sfl.common.config import load_yaml
+from sfl.common.config import load_yaml, client_config_paths, fltrust_root_indices_path
 
 ROOT_FRACTION = 0.05   # 5% of each client's training set
 SEED = 42
 TARGET_COL = "mortality"
 
-CLIENT_CONFIGS = [
-    "configs/clients/client0_medical.yaml",
-    "configs/clients/client1_surgical.yaml",
-    "configs/clients/client2_cardiac.yaml",
-]
+# Active federation profile — see SFL_CLIENT_CONFIG_DIR in sfl.common.config.
+CLIENT_CONFIGS = [str(p) for p in client_config_paths()]
 
-output_path = ROOT / "configs" / "fltrust_root_indices.json"
+output_path = fltrust_root_indices_path()
 root_indices: dict = {}
 total_root_samples = 0
 

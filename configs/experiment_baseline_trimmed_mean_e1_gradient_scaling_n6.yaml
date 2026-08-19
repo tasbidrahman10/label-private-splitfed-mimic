@@ -1,0 +1,29 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Paper Experiment E1 — Gradient scaling attack on Client 1 (Medical/Surgical).
+  Client 1 submits encoder weights scaled by 10x every round. No stale clients.
+  Tests whether SNAS detects a consistently adversarial client and quarantines it.
+  Expected: Client 1 flagged/quarantined within 3-5 rounds (after warm-up).
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/baseline_trimmed_mean/e1_gradient_scaling_n6
+
+fedavg_wait_seconds: 120.0
+
+delay_config:
+  0: 0
+  1: 3
+  2: 6
+  3: 9
+  4: 12
+  5: 15
+
+attack_config:
+  1:
+    type: gradient_scaling
+    params:
+      scale: 10.0

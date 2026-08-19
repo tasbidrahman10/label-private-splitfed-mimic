@@ -1,0 +1,36 @@
+host: 0.0.0.0
+port: 8000
+device: auto
+seed: 42
+expected_num_clients: 6
+input_dim: 265
+encoder_hidden_dim: 64
+activation_dim: 32
+server_hidden_dim: 64
+lr_server: 0.0001
+weight_decay: 0.001
+max_pos_weight: 5.0
+results_dir: results/baseline_fltrust/server_n6
+auth_token: dev-sfl-token
+
+# Async-SplitFed-IR extension parameters
+async_window_seconds: 25.0      # T_base: submission window duration (seconds)
+max_consecutive_misses: 3       # K_max: flag client after this many missed rounds
+staleness_decay: exponential    # decay function: linear | exponential | polynomial | step
+rehab_rounds: 3                 # clean rounds before a quarantined client re-enters
+
+# Aggregator selection: 'snas' | 'krum' | 'trimmed_mean' | 'fltrust'
+# Override per baseline experiment via server_baseline_*.yaml configs.
+aggregator_type: fltrust
+
+# SNAS thresholds (calibrated from warm-up experiments)
+snas_threshold_quarantine: 0.35
+snas_threshold_flag: 0.22
+# SNAS = (alpha*act_div + beta*cosine + gamma*norm) / (1+tau)
+# alpha=0: activation_divergence is logged for analysis but NOT used in gating.
+# Gradient scaling shifts ALL clients' activations equally (non-discriminative);
+# only the weight-space signals (cosine + norm) separate attacker from honest clients.
+snas_alpha: 0.0
+snas_beta: 0.35                 # direction anomaly (detects free rider, label-flip, backdoor)
+snas_gamma: 0.65                # magnitude anomaly (detects gradient scaling)
+fedavg_clip_ratio: 2.0          # per-layer norm clip: submitted norm ≤ ratio × global norm

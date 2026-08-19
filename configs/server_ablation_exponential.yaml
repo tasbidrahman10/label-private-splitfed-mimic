@@ -3,7 +3,7 @@ port: 8000
 device: auto
 seed: 42
 expected_num_clients: 3
-input_dim: 266
+input_dim: 265
 encoder_hidden_dim: 64
 activation_dim: 32
 server_hidden_dim: 64

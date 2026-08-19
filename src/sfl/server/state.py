@@ -62,6 +62,9 @@ class ServerState:
     # Async extension fields
     activation_buffer: dict[int, np.ndarray] = field(default_factory=dict)
     current_round: int = 0
+    # Handle to the in-flight round task, so /admin/reset can cancel a round
+    # that is still sleeping out its submission window before wiping state.
+    round_task: "asyncio.Task | None" = None
     staleness_registry: StalenessRegistry = field(init=False)
     async_controller: AsyncRoundController = field(init=False)
     gate: MaliciousClientGate = field(init=False)
@@ -125,24 +128,28 @@ class ServerState:
         """Load FLTrust root dataset from configs/fltrust_root_indices.json."""
         import pickle
         import pandas as pd
-        from sfl.common.config import repo_root, load_yaml as _load_yaml
+        from sfl.common.config import (
+            repo_root, client_config_paths, fltrust_root_indices_path,
+            load_yaml as _load_yaml,
+        )
         from sfl.client.dataset import VASO_COLS
 
         root = repo_root()
-        index_file = root / "configs" / "fltrust_root_indices.json"
+        index_file = fltrust_root_indices_path()
         if not index_file.exists():
             raise FileNotFoundError(
                 f"FLTrust root indices not found at {index_file}. "
                 "Run: python scripts/create_fltrust_root.py"
             )
         meta = json.loads(index_file.read_text())
-        client_cfgs = [(0, "medical"), (1, "surgical"), (2, "cardiac")]
+        client_cfg_paths = client_config_paths()
 
         self.fltrust_root_data = {}
         self.fltrust_root_labels = {}
 
-        for cid, cname in client_cfgs:
-            cfg = _load_yaml(str(root / "configs" / "clients" / f"client{cid}_{cname}.yaml"))
+        for cfg_path in client_cfg_paths:
+            cfg = _load_yaml(str(cfg_path))
+            cid = int(cfg["client_id"])
             indices = meta["clients"][str(cid)]
             df = pd.read_csv(root / cfg["data_path"])
             sub = df.iloc[indices]
@@ -257,24 +264,28 @@ class ServerState:
         """Load FLTrust root dataset from configs/fltrust_root_indices.json."""
         import pickle
         import pandas as pd
-        from sfl.common.config import repo_root, load_yaml as _load_yaml
+        from sfl.common.config import (
+            repo_root, client_config_paths, fltrust_root_indices_path,
+            load_yaml as _load_yaml,
+        )
         from sfl.client.dataset import VASO_COLS
 
         root = repo_root()
-        index_file = root / "configs" / "fltrust_root_indices.json"
+        index_file = fltrust_root_indices_path()
         if not index_file.exists():
             raise FileNotFoundError(
                 f"FLTrust root indices not found at {index_file}. "
                 "Run: python scripts/create_fltrust_root.py"
             )
         meta = json.loads(index_file.read_text())
-        client_cfgs = [(0, "medical"), (1, "surgical"), (2, "cardiac")]
+        client_cfg_paths = client_config_paths()
 
         self.fltrust_root_data = {}
         self.fltrust_root_labels = {}
 
-        for cid, cname in client_cfgs:
-            cfg = _load_yaml(str(root / "configs" / "clients" / f"client{cid}_{cname}.yaml"))
+        for cfg_path in client_cfg_paths:
+            cfg = _load_yaml(str(cfg_path))
+            cid = int(cfg["client_id"])
             indices = meta["clients"][str(cid)]
             df = pd.read_csv(root / cfg["data_path"])
             sub = df.iloc[indices]

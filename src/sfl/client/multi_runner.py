@@ -15,15 +15,22 @@ from sfl.client.trainer import OptionBClientTrainer
 from sfl.common.attack_simulator import AttackSimulator
 from sfl.common.config import load_yaml
 from sfl.common.config import ensure_dir
+from sfl.common.config import repo_root
+from sfl.common.config import client_config_paths
 from sfl.common.logging_utils import choose_device, set_seed
 from sfl.common.models import ClientEncoder
 
 
-DEFAULT_CLIENT_CONFIGS = [
-    "configs/clients/client0_medical.yaml",
-    "configs/clients/client1_surgical.yaml",
-    "configs/clients/client2_cardiac.yaml",
-]
+def _default_client_configs() -> list[str]:
+    """Client configs for the active profile (see SFL_CLIENT_CONFIG_DIR).
+
+    Resolved lazily at call time rather than at import so the profile can be
+    selected by the caller's environment.
+    """
+    return [
+        str(p.relative_to(repo_root())).replace("\\", "/")
+        for p in client_config_paths()
+    ]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -160,7 +167,7 @@ def run_all_clients(args: argparse.Namespace) -> None:
     if attack_config:
         print(f"Attack injection active — attack_config: {attack_config}")
 
-    client_paths = args.client_configs or DEFAULT_CLIENT_CONFIGS
+    client_paths = args.client_configs or _default_client_configs()
     trainers = [
         build_trainer(load_yaml(path), experiment_config, api, device)
         for path in client_paths
@@ -214,6 +221,7 @@ def run_all_clients(args: argparse.Namespace) -> None:
             # rather than accidentally triggering a new round.
             open_status = api.open_fedavg_round()
             print(f"  Async window opened: {open_status}")
+            window_open_time = time.perf_counter()
             for trainer, _save_name in trainers:
                 cid = trainer.client_id
 
@@ -223,8 +231,17 @@ def run_all_clients(args: argparse.Namespace) -> None:
                 else:
                     delay = delay_config.get(cid, 0.0)
                 if delay > 0.0:
-                    print(f"  Client {cid}: sleeping {delay}s before FedAvg submission (async sim)")
-                    time.sleep(delay)
+                    # Delay is measured from window-open, not from the previous
+                    # client's submission — submissions here happen in a loop, so
+                    # sleeping the raw `delay` for every client would stack each
+                    # client's wait on top of every prior client's, letting a few
+                    # small delays add up to miss the window even though no single
+                    # configured delay exceeds it.
+                    remaining = delay - (time.perf_counter() - window_open_time)
+                    if remaining > 0.0:
+                        print(f"  Client {cid}: sleeping {remaining:.1f}s before FedAvg submission "
+                              f"(async sim, target delay {delay}s from window open)")
+                        time.sleep(remaining)
 
                 # Optionally inject attack on encoder weights before submission
                 if cid in attack_config:

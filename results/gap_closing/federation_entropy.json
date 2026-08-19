@@ -1,14 +1,127 @@
 [
   {
     "method": "Krum",
-    "condition": "all (E1/E2/E4, 10 seeds)",
+    "condition": "measured, E1/E2/E4 x 10 seeds",
     "per_client_share": {
       "client0": 1.0,
       "client1": 0.0,
       "client2": 0.0
     },
-    "normalized_entropy": -0.0,
-    "n_selection_events": 168
+    "normalized_entropy": 0.0,
+    "n_selection_events": 300
+  },
+  {
+    "method": "SNAS (measured, under attack)",
+    "condition": "clean/E1/E2/E4/E6 x 10 seeds",
+    "per_client_share": {
+      "client0": 0.544,
+      "client1": 0.2808,
+      "client2": 0.1752
+    },
+    "normalized_entropy": 0.7232,
+    "n_rounds": 900,
+    "n_complete_runs": 90,
+    "n_partial_runs_dropped": 8,
+    "n_rounds_dropped": 24
+  },
+  {
+    "method": "SNAS (measured) \u2014 clean",
+    "condition": "10 seeds, 100 rounds",
+    "per_client_share": {
+      "client0": 0.3913,
+      "client1": 0.2542,
+      "client2": 0.3544
+    },
+    "normalized_entropy": 0.9857,
+    "n_rounds": 100
+  },
+  {
+    "method": "SNAS (measured) \u2014 E1_gradient_scaling",
+    "condition": "10 seeds, 100 rounds",
+    "per_client_share": {
+      "client0": 0.4805,
+      "client1": 0.0843,
+      "client2": 0.4352
+    },
+    "normalized_entropy": 0.7668,
+    "n_rounds": 100
+  },
+  {
+    "method": "SNAS (measured) \u2014 E2_free_rider",
+    "condition": "10 seeds, 100 rounds",
+    "per_client_share": {
+      "client0": 0.5632,
+      "client1": 0.3659,
+      "client2": 0.0709
+    },
+    "normalized_entropy": 0.6853,
+    "n_rounds": 100
+  },
+  {
+    "method": "SNAS (measured) \u2014 E4_attack_straggler",
+    "condition": "10 seeds, 100 rounds",
+    "per_client_share": {
+      "client0": 0.8625,
+      "client1": 0.135,
+      "client2": 0.0025
+    },
+    "normalized_entropy": 0.2489,
+    "n_rounds": 100
+  },
+  {
+    "method": "SNAS (measured) \u2014 E6_honest_straggler",
+    "condition": "10 seeds, 100 rounds",
+    "per_client_share": {
+      "client0": 0.6052,
+      "client1": 0.3931,
+      "client2": 0.0016
+    },
+    "normalized_entropy": 0.6168,
+    "n_rounds": 100
+  },
+  {
+    "method": "SNAS (measured) \u2014 nodetect E1_gradient_scaling",
+    "condition": "10 seeds, 100 rounds",
+    "per_client_share": {
+      "client0": 0.3913,
+      "client1": 0.2542,
+      "client2": 0.3544
+    },
+    "normalized_entropy": 0.9857,
+    "n_rounds": 100
+  },
+  {
+    "method": "SNAS (measured) \u2014 nodetect E2_free_rider",
+    "condition": "10 seeds, 100 rounds",
+    "per_client_share": {
+      "client0": 0.3913,
+      "client1": 0.2542,
+      "client2": 0.3544
+    },
+    "normalized_entropy": 0.9857,
+    "n_rounds": 100
+  },
+  {
+    "method": "SNAS (measured) \u2014 nodetect E4_attack_straggler",
+    "condition": "10 seeds, 100 rounds",
+    "per_client_share": {
+      "client0": 0.6052,
+      "client1": 0.3931,
+      "client2": 0.0016
+    },
+    "normalized_entropy": 0.6168,
+    "n_rounds": 100
+  },
+  {
+    "method": "SNAS (measured) \u2014 nodetect E6_honest_straggler",
+    "condition": "10 seeds, 100 rounds",
+    "per_client_share": {
+      "client0": 0.6052,
+      "client1": 0.3931,
+      "client2": 0.0016
+    },
+    "normalized_entropy": 0.6168,
+    "n_rounds": 100
   },
   {
     "method": "SNAS (analytic, clean all-accepted)",
@@ -19,60 +132,5 @@
       "client2": 0.3544
     },
     "normalized_entropy": 0.9857
-  },
-  {
-    "method": "SNAS",
-    "condition": "baseline_clean:async_clean",
-    "per_client_share": {
-      "client0": 0.3913,
-      "client1": 0.2542,
-      "client2": 0.3544
-    },
-    "normalized_entropy": 0.9857,
-    "n_rounds": 100
-  },
-  {
-    "method": "no-detection (async FedAvg)",
-    "condition": "nodetect:E1_gradient_scaling",
-    "per_client_share": {
-      "client0": 0.3913,
-      "client1": 0.2542,
-      "client2": 0.3544
-    },
-    "normalized_entropy": 0.9857,
-    "n_rounds": 100
-  },
-  {
-    "method": "no-detection (async FedAvg)",
-    "condition": "nodetect:E2_free_rider",
-    "per_client_share": {
-      "client0": 0.3913,
-      "client1": 0.2542,
-      "client2": 0.3544
-    },
-    "normalized_entropy": 0.9857,
-    "n_rounds": 100
-  },
-  {
-    "method": "no-detection (async FedAvg)",
-    "condition": "nodetect:E4_attack_straggler",
-    "per_client_share": {
-      "client0": 0.6062,
-      "client1": 0.3938,
-      "client2": 0.0
-    },
-    "normalized_entropy": 0.6102,
-    "n_rounds": 100
-  },
-  {
-    "method": "no-detection (async FedAvg)",
-    "condition": "nodetect:E6_honest_straggler",
-    "per_client_share": {
-      "client0": 0.6062,
-      "client1": 0.3938,
-      "client2": 0.0
-    },
-    "normalized_entropy": 0.6102,
-    "n_rounds": 100
   }
 ]

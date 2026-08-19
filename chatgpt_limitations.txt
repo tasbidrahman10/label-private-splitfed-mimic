@@ -1,0 +1,365 @@
+Overall verdict
+
+The paper is strongly aligned with the special issue, but I would not submit the present version without substantial revision. The topic directly matches the call’s emphasis on robustness, realistic failures, resource constraints, and healthcare applications. The special issue remains open until 28 August 2026. Official CFP
+
+However, several methodological problems could lead to rejection. My provisional recommendation would be:
+
+Major revision / likely reject in its current form
+Overall score: approximately 4/10
+
+Criterion	Assessment
+Special-issue relevance	Strong
+Problem importance	Strong
+Novelty	Moderate
+Technical soundness	Weak in the current formulation
+Experimental rigor	Insufficient for Machine Learning
+Clarity	Generally good
+Reproducibility	Insufficient
+Publication readiness	Not ready
+Strengths
+The intersection of asynchronous SplitFed, staleness, and malicious clients is timely and relevant.
+A low-client cross-silo setting is potentially realistic for healthcare.
+The manuscript is commendably transparent about the alternating attack that defeats memoryless SNAS.
+Ten-seed evaluation for the principal experiments is better than the common single-seed practice.
+The contribution-entropy idea is useful, although its current comparison needs correction.
+The paper is readable, professionally organized, and visually clean.
+Major concerns
+1. Equation (9) contains a critical vulnerability
+
+The norm anomaly is asymmetric:
+
+A
+i
+norm
+	​
+
+=
+K
+1
+	​
+
+k
+∑
+	​
+
+min(
+log100
+log(∥θ
+i,k
+	​
+
+∥/∥θ
+k
+g
+	​
+
+∥)
+	​
+
+,1).
+
+When the submitted norm is smaller than the global norm, the score becomes negative. Consider
+
+θ
+i
+	​
+
+=0.1θ
+g
+	​
+
+.
+
+Then cosine anomaly is zero and
+
+A
+i
+norm
+	​
+
+=
+log(100)
+log(0.1)
+	​
+
+=−0.5.
+
+Consequently,
+
+SNAS
+i
+	​
+
+=
+1+τ
+i
+	​
+
+0.35(0)+0.65(−0.5)
+	​
+
+=
+1+τ
+i
+	​
+
+−0.325
+	​
+
+,
+
+which will always be accepted. Norm clipping in Equation (14) only limits large norms, so it does not stop this attack.
+
+This is a direct zeroing/downscaling attack against the proposed detector. The norm score should be symmetric, for example:
+
+A
+i
+norm
+	​
+
+=min
+	​
+
+log100
+	​
+
+log(
+∥Δ
+ref,k
+	​
+
+∥+ϵ
+∥Δ
+i,k
+	​
+
+∥+ϵ
+	​
+
+)
+	​
+
+	​
+
+,1
+	​
+
+,
+
+preferably operating on model updates rather than absolute parameters.
+
+This issue alone is sufficient for a negative review unless corrected and experimentally evaluated.
+
+2. The evaluated “gradient-scaling” attack is not a standard update-scaling attack
+
+The manuscript multiplies the entire encoder parameters by 10. A conventional model-replacement or update-scaling attack would be closer to
+
+θ
+i
+attack
+	​
+
+=θ
+i
+base
+	​
+
++s(θ
+i
+local
+	​
+
+−θ
+i
+base
+	​
+
+).
+
+Multiplying absolute weights by ten is unusually conspicuous and makes norm-based detection comparatively easy. Moreover, cosine and norm comparisons between absolute models can conceal malicious update directions because the shared base model dominates the geometry.
+
+The detector should compare
+
+Δ
+i
+	​
+
+=θ
+i
+	​
+
+−θ
+i
+base
+	​
+
+
+against an appropriate robust update reference. For asynchronous clients, θ
+i
+base
+	​
+
+ must be the exact global version from which that client started.
+
+Additional attacks should include:
+
+update scaling and model replacement;
+sign-flipping;
+inverse scaling and zeroing;
+ALIE/min-max or Fang-style attacks;
+targeted backdoor poisoning;
+adaptive optimization directly against SNAS.
+
+The statement that undetected attacks below 2× are “harmless” is also too strong. The reported AUROC change is considerably larger than the clean ten-seed standard deviation.
+
+3. The robust-baseline comparison is not valid
+Krum
+
+Krum’s standard Byzantine-resilience condition is
+
+n≥2f+3.
+
+With three clients and one malicious client, at least five clients are required. Original Krum paper
+
+If the implementation uses n=3,f=1, Krum has zero nearest neighbours in its score. Every score can therefore become zero, and deterministic tie-breaking may always select Client 0. Thus, the reported 880/880 Client-0 selections may be an implementation/configuration artifact—not evidence that Krum inherently “collapses federation.”
+
+The number 880 is itself unexplained: two experiments, ten seeds, and ten rounds should not produce 880 ordinary Krum aggregation decisions.
+
+Trimmed mean
+
+A trim ratio of 0.2 deliberately trims zero coordinates at n=3. This is not a meaningful robust baseline. Coordinate-wise median should be evaluated, or the number of clients should be increased.
+
+FLTrust
+
+The reported FLTrust result is described as uniform averaging and is therefore not FLTrust. Genuine FLTrust requires a clean server root dataset and a server update used as the trust direction. Official FLTrust paper
+
+If the server is permitted to hold root features and labels, it can instantiate the global encoder and compute an encoder gradient. If the threat model prohibits server root data, FLTrust should be marked inapplicable and omitted from the numerical table. A method that reduces to FedAvg should not be reported as an FLTrust result.
+
+All baselines must be evaluated using the same seeds. Currently, trimmed mean, FLTrust, and synchronous SplitFed are partly single-seed results.
+
+4. The asynchronous protocol and staleness definition are underspecified
+
+The manuscript defines staleness as consecutive missed rounds. That is not necessarily model staleness. A client may miss a round but subsequently start from the newest model, while a delayed submission can be based on an older model even without the stated missed-round pattern.
+
+Use version-based staleness:
+
+τ
+i
+	​
+
+=r−v
+i
+	​
+
+,
+
+where v
+i
+	​
+
+ is the global encoder version used to initiate the submitted update.
+
+Algorithm 1 also resets τ
+i
+	​
+
+ before the aggregation step. Unless the implementation stores the arrival staleness separately, every submitted client may receive d(0)=1. The algorithm should distinguish:
+
+arrival_staleness;
+the updated registry value for the next round.
+
+The method is more accurately described as buffered or windowed semi-asynchronous aggregation. A genuine asynchronous evaluation should report:
+
+time-to-target AUROC;
+wall-clock completion time;
+waiting time per round;
+fixed versus adaptive timeout;
+multiple delay/dropout distributions;
+update-version distributions;
+server-head consistency during concurrent SplitFed training.
+
+Final AUROC alone does not establish an asynchronous advantage.
+
+5. The defense covers only one part of the SplitFed attack surface
+
+A malicious SplitFed client interacts with the server-side model throughout local training by sending activations and receiving gradients. It can poison the shared server head before encoder aggregation. Quarantining its submitted encoder does not undo malicious updates already applied to g
+ϕ
+	​
+
+.
+
+Therefore, “intrusion-resilient SplitFed” is broader than what has been demonstrated. The authors should either:
+
+defend and, where necessary, roll back server-head updates; or
+narrow the contribution explicitly to detecting aggregation-time encoder model-replacement attacks.
+6. Experimental evidence is too limited for this journal
+
+The study uses one task, one single-centre dataset, three constructed clients, a small MLP, and ten rounds. MIMIC-IV originates from Beth Israel Deaconess Medical Center, so ICU-unit partitions do not constitute independent hospitals. Official MIMIC-IV description
+
+At minimum, add:
+
+N≥5 so Krum can be correctly configured;
+experiments with 5, 10, and preferably 20 clients;
+different malicious-client fractions;
+a second dataset, ideally multi-centre eICU;
+per-client AUROC and AUPRC;
+worst-client performance;
+calibration or Brier score;
+class prevalence and client-distribution statistics;
+patient-level train/validation/test separation;
+an untouched test set.
+
+The manuscript currently reports validation AUROC without describing an independent test set.
+
+7. The ablation does not isolate the anomaly gate
+
+The “no-detection” condition disables both SNAS gating and norm clipping. Therefore, the reported gain cannot be attributed specifically to SNAS.
+
+A factorial ablation is needed:
+
+Configuration	Gate	Clipping	Staleness normalization
+Async FedAvg	No	No	Yes
+Clipping only	No	Yes	Yes
+SNAS only	Yes	No	Yes
+Full method	Yes	Yes	Yes
+No-staleness SNAS	Yes	Yes	No
+
+Cosine-only and norm-only versions should also be tested.
+
+8. Detection claims require qualification
+
+The gate is disabled during warm-up, yet the abstract reports 100% detection. If an attacker is active in round 1, overall submission-level detection cannot be 100%. Report:
+
+post-warm-up detection rate;
+overall detection rate including warm-up;
+number of malicious and honest submissions;
+detection delay;
+confidence intervals for detection and false-positive rates.
+
+“0% observed FPR” is appropriate; an unqualified “0% FPR” is too strong.
+
+Additional issues
+“Label-private” is misleading because the server evaluates the supervised loss, but the label location and transmission protocol are not clearly defined.
+Table 4 compares SNAS in the clean condition with Krum under attack. Contribution entropy should be compared under identical scenarios and computed separately over honest clients.
+Table 9 calls d(τ) an aggregation weight, although Equation (12) subsequently normalizes it. Its poisoning-power calculation ignores normalized shares and persistent model effects.
+Threshold selection and sensitivity appear to use the same attack setting used for evaluation. A separate calibration procedure is required.
+The preprocessing description is inadequate: the 266 features, cohort criteria, mortality horizon, imputation, normalization, sample counts, class balance, patient overlap, optimizer, learning rate, and activation functions are missing.
+The quantum-FL and quantum-split-learning paragraphs are unrelated to the contribution and should be removed.
+Reference 1 is bibliographically incorrect. FedAvg was published at AISTATS in 2017, not as a 2023 paper. Official PMLR record
+FLTrust should be cited as the NDSS 2021 paper rather than only as a later arXiv version.
+The title should be narrowed unless the threat model and experiments are substantially expanded.
+Recommended decision
+
+The manuscript has a good core research direction and excellent topical fit, but the asymmetric norm-score vulnerability, invalid baseline configuration, incomplete asynchronous protocol, and limited experimentation are submission blockers.
+
+Given the 28 August deadline, I would submit only if the authors can, at minimum:
+
+Correct Equation (9) and test inverse-scaling/zeroing attacks.
+Redefine detection over version-relative updates.
+Expand to at least five clients and rerun valid robust baselines.
+Separate gating from clipping in the ablation.
+Clarify the asynchronous event protocol and staleness handling.
+Provide complete dataset, test-split, and training details.
+Narrow all security, privacy, and clinical claims.
+
+Without these corrections, the paper is likely to receive a rejection rather than a normal major-revision decision.
