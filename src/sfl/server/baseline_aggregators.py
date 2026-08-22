@@ -125,6 +125,45 @@ def trimmed_mean_aggregate(
 
 
 # ---------------------------------------------------------------------------
+# Coordinate-wise median
+# ---------------------------------------------------------------------------
+
+def coordinate_median_aggregate(
+    submissions: Dict[int, np.ndarray],
+) -> np.ndarray:
+    """
+    Coordinate-wise median. No staleness input, no anomaly gate.
+
+    This is the robust baseline that trimmed mean was supposed to be at this
+    client count. `trimmed_mean_aggregate` with trim_ratio=0.2 and n=3 computes
+    k = floor(0.2 * 3) = 0, so it trims nothing and is arithmetically identical
+    to vanilla FedAvg -- it appears in the comparison as a robust aggregator
+    while providing no robustness at all.
+
+    The median has no such degeneracy: at n=3 it returns the middle value of
+    every coordinate, so a single Byzantine client cannot move any coordinate
+    past its honest neighbours no matter how large its perturbation. That is
+    the f=1, n=3 breakdown point, which is the strongest guarantee available
+    at this federation size, and it makes the comparison against SNAS a fair
+    one rather than a comparison against a relabelled mean.
+
+    np.median is used rather than a hand-rolled middle-element pick so the
+    even-n case (which occurs when a client drops out of the window) averages
+    the two central values in the standard way instead of silently biasing
+    toward one side.
+    """
+    stacked = np.stack(list(submissions.values()), axis=0)  # (n_clients, n_params)
+    n = stacked.shape[0]
+
+    logger.info(
+        "Coordinate-wise median: %d clients, breakdown point f=%d. "
+        "No staleness awareness by design.",
+        n, (n - 1) // 2,
+    )
+    return np.median(stacked, axis=0)
+
+
+# ---------------------------------------------------------------------------
 # FLTrust
 # ---------------------------------------------------------------------------
 

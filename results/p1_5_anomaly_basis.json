@@ -1,0 +1,84 @@
+{
+  "design": "deltadet and nodetect share a training trajectory at each seed (gate off in both); only the anomaly basis differs.",
+  "warmup_rounds_excluded": 1,
+  "experiments": {
+    "E1_gradient_scaling": {
+      "absolute": {
+        "arm": "nodetect",
+        "n_seeds": 10,
+        "n_attacker_obs": 80,
+        "n_honest_obs": 160,
+        "mean_attacker": 0.37,
+        "mean_honest": 0.1606,
+        "separation": 2.3,
+        "roc_auc": 1.0,
+        "dr_at_zero_fpr": 1.0,
+        "n_nonfinite_excluded": 0
+      },
+      "delta": {
+        "arm": "deltadet",
+        "n_seeds": 10,
+        "n_attacker_obs": 80,
+        "n_honest_obs": 160,
+        "mean_attacker": 0.4208,
+        "mean_honest": 0.3061,
+        "separation": 1.37,
+        "roc_auc": 0.8906,
+        "dr_at_zero_fpr": 0.125,
+        "n_nonfinite_excluded": 0
+      }
+    },
+    "E2_free_rider": {
+      "absolute": {
+        "arm": "nodetect",
+        "n_seeds": 10,
+        "n_attacker_obs": 80,
+        "n_honest_obs": 160,
+        "mean_attacker": 0.4149,
+        "mean_honest": 0.051,
+        "separation": 8.14,
+        "roc_auc": 1.0,
+        "dr_at_zero_fpr": 1.0,
+        "n_nonfinite_excluded": 0
+      },
+      "delta": {
+        "arm": "deltadet",
+        "n_seeds": 10,
+        "n_attacker_obs": 80,
+        "n_honest_obs": 160,
+        "mean_attacker": 0.5633,
+        "mean_honest": 0.2105,
+        "separation": 2.68,
+        "roc_auc": 1.0,
+        "dr_at_zero_fpr": 1.0,
+        "n_nonfinite_excluded": 0
+      }
+    },
+    "E4_attack_straggler": {
+      "absolute": {
+        "arm": "nodetect",
+        "n_seeds": 10,
+        "n_attacker_obs": 80,
+        "n_honest_obs": 80,
+        "mean_attacker": 0.3909,
+        "mean_honest": 0.1824,
+        "separation": 2.14,
+        "roc_auc": 1.0,
+        "dr_at_zero_fpr": 1.0,
+        "n_nonfinite_excluded": 0
+      },
+      "delta": {
+        "arm": "deltadet",
+        "n_seeds": 10,
+        "n_attacker_obs": 60,
+        "n_honest_obs": 60,
+        "mean_attacker": 0.439,
+        "mean_honest": 0.3814,
+        "separation": 1.15,
+        "roc_auc": 0.5138,
+        "dr_at_zero_fpr": 0.1667,
+        "n_nonfinite_excluded": 40
+      }
+    }
+  }
+}

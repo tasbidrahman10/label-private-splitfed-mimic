@@ -1,0 +1,38 @@
+{
+  "threshold_aware": {
+    "mean_auroc": 0.961057,
+    "mean_auprc": 0.834091,
+    "n_rounds": 10,
+    "csv": "experiment_summary_option_b_20260822_143832_seed42.csv"
+  },
+  "alternating_exponential": {
+    "mean_auroc": 0.961299,
+    "mean_auprc": 0.835507,
+    "n_rounds": 10,
+    "csv": "experiment_summary_option_b_20260822_144451_seed42.csv"
+  },
+  "alternating_linear": {
+    "mean_auroc": 0.961369,
+    "mean_auprc": 0.835801,
+    "n_rounds": 10,
+    "csv": "experiment_summary_option_b_20260822_145138_seed42.csv"
+  },
+  "alternating_polynomial": {
+    "mean_auroc": 0.961369,
+    "mean_auprc": 0.835801,
+    "n_rounds": 10,
+    "csv": "experiment_summary_option_b_20260822_145825_seed42.csv"
+  },
+  "alternating_step": {
+    "mean_auroc": 0.961057,
+    "mean_auprc": 0.834665,
+    "n_rounds": 10,
+    "csv": "experiment_summary_option_b_20260822_150512_seed42.csv"
+  },
+  "slow_ramp": {
+    "mean_auroc": 0.964225,
+    "mean_auprc": 0.844973,
+    "n_rounds": 15,
+    "csv": "experiment_summary_option_b_20260822_151159_seed42.csv"
+  }
+}

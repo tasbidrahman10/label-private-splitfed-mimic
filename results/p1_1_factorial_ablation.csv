@@ -1,0 +1,17 @@
+experiment,arm,gate,clip,auroc_mean,auroc_std,n_seeds
+E1 gradient scaling,nodetect,off,off,0.957841,0.000167,10
+E1 gradient scaling,cliponly,off,on,0.959612,0.000118,10
+E1 gradient scaling,gateonly,on,off,0.958467,0.000262,10
+E1 gradient scaling,snas,on,on,0.961308,0.000137,10
+E2 free rider,nodetect,off,off,0.814094,0.013653,10
+E2 free rider,cliponly,off,on,0.858525,0.009575,10
+E2 free rider,gateonly,on,off,0.900209,0.009743,10
+E2 free rider,snas,on,on,0.909366,0.007025,10
+E3 attack + straggler,nodetect,off,off,0.956699,0.000302,10
+E3 attack + straggler,cliponly,off,on,0.95794,0.000144,10
+E3 attack + straggler,gateonly,on,off,0.956992,0.00026,10
+E3 attack + straggler,snas,on,on,0.959519,0.000427,10
+E4 honest straggler,nodetect,off,off,0.965801,0.000383,10
+E4 honest straggler,cliponly,off,on,0.965797,0.000355,10
+E4 honest straggler,gateonly,on,off,0.965812,0.000377,10
+E4 honest straggler,snas,on,on,0.965915,0.000226,10

@@ -1,0 +1,30 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Paper Experiment E5 — Backdoor attack on Client 1 (Surgical).
+  Client 1 perturbs a random 10% of floating-point encoder weights by +5.0
+  before submitting. The perturbation is sparse, so it moves the submission
+  far less in norm than a 10x scaling does while still implanting a large
+  localised change — the hardest of the four attacks for a purely
+  magnitude-based detector. No stale clients. Attack strength is
+  attack_simulator.backdoor's documented default.
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/experiment_e5_backdoor
+
+fedavg_wait_seconds: 120.0
+
+delay_config:
+  0: 0
+  1: 5
+  2: 10
+
+attack_config:
+  1:
+    type: backdoor
+    params:
+      trigger_scale: 5.0
+      trigger_fraction: 0.1

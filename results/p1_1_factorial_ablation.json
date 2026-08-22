@@ -1,0 +1,403 @@
+{
+  "description": "P1-1 2x2 factorial ablation of the SNAS anomaly gate and the norm clip, paired by seed across ten seeds per cell.",
+  "arms": {
+    "nodetect": {
+      "gate": false,
+      "clip": false
+    },
+    "cliponly": {
+      "gate": false,
+      "clip": true
+    },
+    "gateonly": {
+      "gate": true,
+      "clip": false
+    },
+    "snas": {
+      "gate": true,
+      "clip": true
+    }
+  },
+  "experiments": {
+    "E1_gradient_scaling": {
+      "label": "E1 gradient scaling",
+      "cells": {
+        "nodetect": {
+          "n_seeds": 10,
+          "mean": 0.957841,
+          "std": 0.000167
+        },
+        "cliponly": {
+          "n_seeds": 10,
+          "mean": 0.959612,
+          "std": 0.000118
+        },
+        "gateonly": {
+          "n_seeds": 10,
+          "mean": 0.958467,
+          "std": 0.000262
+        },
+        "snas": {
+          "n_seeds": 10,
+          "mean": 0.961308,
+          "std": 0.000137
+        }
+      },
+      "gate_main_effect": {
+        "mean": 0.001161,
+        "std": 0.000175,
+        "n_seeds": 10,
+        "ttest_p": 5.822859025176087e-09
+      },
+      "clip_main_effect": {
+        "mean": 0.002306,
+        "std": 0.000169,
+        "n_seeds": 10,
+        "ttest_p": 9.538978631024878e-12
+      },
+      "interaction": {
+        "mean": 0.001071,
+        "std": 0.000276,
+        "n_seeds": 10,
+        "ttest_p": 6.285973048401138e-07
+      },
+      "simple_effects": {
+        "gate_given_no_clip": {
+          "n_seeds": 10,
+          "delta": 0.000626,
+          "delta_std": 0.000264,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 2.369,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 3.7258889030758416e-05
+        },
+        "gate_given_clip": {
+          "n_seeds": 10,
+          "delta": 0.001696,
+          "delta_std": 0.000171,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 9.934,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 1.6467112539096294e-10
+        },
+        "clip_given_no_gate": {
+          "n_seeds": 10,
+          "delta": 0.001771,
+          "delta_std": 0.000127,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 13.9971,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 7.662729217849156e-12
+        },
+        "clip_given_gate": {
+          "n_seeds": 10,
+          "delta": 0.002841,
+          "delta_std": 0.000281,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 10.1122,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 1.4050709427560842e-10
+        },
+        "both_vs_neither": {
+          "n_seeds": 10,
+          "delta": 0.003467,
+          "delta_std": 0.000239,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 14.4814,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 5.648787661958497e-12
+        }
+      }
+    },
+    "E2_free_rider": {
+      "label": "E2 free rider",
+      "cells": {
+        "nodetect": {
+          "n_seeds": 10,
+          "mean": 0.814094,
+          "std": 0.013653
+        },
+        "cliponly": {
+          "n_seeds": 10,
+          "mean": 0.858525,
+          "std": 0.009575
+        },
+        "gateonly": {
+          "n_seeds": 10,
+          "mean": 0.900209,
+          "std": 0.009743
+        },
+        "snas": {
+          "n_seeds": 10,
+          "mean": 0.909366,
+          "std": 0.007025
+        }
+      },
+      "gate_main_effect": {
+        "mean": 0.068478,
+        "std": 0.014917,
+        "n_seeds": 10,
+        "ttest_p": 1.4987005949544202e-07
+      },
+      "clip_main_effect": {
+        "mean": 0.026795,
+        "std": 0.004746,
+        "n_seeds": 10,
+        "ttest_p": 2.4664808057061e-08
+      },
+      "interaction": {
+        "mean": -0.035274,
+        "std": 0.011123,
+        "n_seeds": 10,
+        "ttest_p": 3.4938782368610835e-06
+      },
+      "simple_effects": {
+        "gate_given_no_clip": {
+          "n_seeds": 10,
+          "delta": 0.086115,
+          "delta_std": 0.018558,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 4.6403,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 1.365107367457055e-07
+        },
+        "gate_given_clip": {
+          "n_seeds": 10,
+          "delta": 0.050841,
+          "delta_std": 0.012747,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 3.9884,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 5.033362543111673e-07
+        },
+        "clip_given_no_gate": {
+          "n_seeds": 10,
+          "delta": 0.044432,
+          "delta_std": 0.009638,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 4.6101,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 1.4446422108711895e-07
+        },
+        "clip_given_gate": {
+          "n_seeds": 10,
+          "delta": 0.009158,
+          "delta_std": 0.003745,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 2.4456,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 2.898272586093623e-05
+        },
+        "both_vs_neither": {
+          "n_seeds": 10,
+          "delta": 0.095272,
+          "delta_std": 0.016552,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 5.7561,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 2.08020907832314e-08
+        }
+      }
+    },
+    "E4_attack_straggler": {
+      "label": "E3 attack + straggler",
+      "cells": {
+        "nodetect": {
+          "n_seeds": 10,
+          "mean": 0.956699,
+          "std": 0.000302
+        },
+        "cliponly": {
+          "n_seeds": 10,
+          "mean": 0.95794,
+          "std": 0.000144
+        },
+        "gateonly": {
+          "n_seeds": 10,
+          "mean": 0.956992,
+          "std": 0.00026
+        },
+        "snas": {
+          "n_seeds": 10,
+          "mean": 0.959519,
+          "std": 0.000427
+        }
+      },
+      "gate_main_effect": {
+        "mean": 0.000936,
+        "std": 0.000242,
+        "n_seeds": 10,
+        "ttest_p": 6.441557977510961e-07
+      },
+      "clip_main_effect": {
+        "mean": 0.001884,
+        "std": 0.000288,
+        "n_seeds": 10,
+        "ttest_p": 6.659726571910643e-09
+      },
+      "interaction": {
+        "mean": 0.001287,
+        "std": 0.000382,
+        "n_seeds": 10,
+        "ttest_p": 2.095834806557694e-06
+      },
+      "simple_effects": {
+        "gate_given_no_clip": {
+          "n_seeds": 10,
+          "delta": 0.000292,
+          "delta_std": 7.9e-05,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 3.7129,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 9.270159329023056e-07
+        },
+        "gate_given_clip": {
+          "n_seeds": 10,
+          "delta": 0.001579,
+          "delta_std": 0.000428,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 3.6886,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 9.800144611661417e-07
+        },
+        "clip_given_no_gate": {
+          "n_seeds": 10,
+          "delta": 0.00124,
+          "delta_std": 0.000219,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 5.6553,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 2.4291875532014e-08
+        },
+        "clip_given_gate": {
+          "n_seeds": 10,
+          "delta": 0.002527,
+          "delta_std": 0.000436,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 5.7953,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 1.9596201999818378e-08
+        },
+        "both_vs_neither": {
+          "n_seeds": 10,
+          "delta": 0.00282,
+          "delta_std": 0.0005,
+          "wins": 10,
+          "win_rate": "10/10",
+          "cohens_d_paired": 5.6359,
+          "wilcoxon_p": 0.001953125,
+          "ttest_p": 2.5034814453383956e-08
+        }
+      }
+    },
+    "E6_honest_straggler": {
+      "label": "E4 honest straggler",
+      "cells": {
+        "nodetect": {
+          "n_seeds": 10,
+          "mean": 0.965801,
+          "std": 0.000383
+        },
+        "cliponly": {
+          "n_seeds": 10,
+          "mean": 0.965797,
+          "std": 0.000355
+        },
+        "gateonly": {
+          "n_seeds": 10,
+          "mean": 0.965812,
+          "std": 0.000377
+        },
+        "snas": {
+          "n_seeds": 10,
+          "mean": 0.965915,
+          "std": 0.000226
+        }
+      },
+      "gate_main_effect": {
+        "mean": 6.5e-05,
+        "std": 0.000128,
+        "n_seeds": 10,
+        "ttest_p": 0.1436180007225287
+      },
+      "clip_main_effect": {
+        "mean": 4.9e-05,
+        "std": 0.000172,
+        "n_seeds": 10,
+        "ttest_p": 0.3868448268797715
+      },
+      "interaction": {
+        "mean": 0.000108,
+        "std": 0.000284,
+        "n_seeds": 10,
+        "ttest_p": 0.2607270528996934
+      },
+      "simple_effects": {
+        "gate_given_no_clip": {
+          "n_seeds": 10,
+          "delta": 1.1e-05,
+          "delta_std": 6.4e-05,
+          "wins": 6,
+          "win_rate": "6/10",
+          "cohens_d_paired": 0.1724,
+          "wilcoxon_p": 0.4921875,
+          "ttest_p": 0.5989753300813742
+        },
+        "gate_given_clip": {
+          "n_seeds": 10,
+          "delta": 0.000119,
+          "delta_std": 0.000263,
+          "wins": 5,
+          "win_rate": "5/10",
+          "cohens_d_paired": 0.4522,
+          "wilcoxon_p": 0.232421875,
+          "ttest_p": 0.1865407866401588
+        },
+        "clip_given_no_gate": {
+          "n_seeds": 10,
+          "delta": -5e-06,
+          "delta_std": 5.6e-05,
+          "wins": 4,
+          "win_rate": "4/10",
+          "cohens_d_paired": -0.0802,
+          "wilcoxon_p": 0.625,
+          "ttest_p": 0.8056057693607178
+        },
+        "clip_given_gate": {
+          "n_seeds": 10,
+          "delta": 0.000103,
+          "delta_std": 0.00031,
+          "wins": 5,
+          "win_rate": "5/10",
+          "cohens_d_paired": 0.3331,
+          "wilcoxon_p": 0.232421875,
+          "ttest_p": 0.3196058591528434
+        },
+        "both_vs_neither": {
+          "n_seeds": 10,
+          "delta": 0.000114,
+          "delta_std": 0.000295,
+          "wins": 5,
+          "win_rate": "5/10",
+          "cohens_d_paired": 0.3879,
+          "wilcoxon_p": 0.322265625,
+          "ttest_p": 0.2510570410656542
+        }
+      }
+    }
+  }
+}

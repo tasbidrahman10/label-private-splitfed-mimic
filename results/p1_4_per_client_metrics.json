@@ -1,0 +1,1320 @@
+{
+  "description": "P1-4: per-client AUROC/AUPRC/F1 over the last 3 rounds, averaged across seeds. Runs identified by reproducing the mean AUROC recorded in p08_rerun_progress.json, so pre-P0-8 266-feature runs in the same directories are excluded.",
+  "rounds_averaged": 3,
+  "client_prevalence_note": "Full-partition mortality rate, for context. AUPRC is computed on the validation split, whose prevalence may differ slightly.",
+  "client_prevalence": {
+    "0": {
+      "name": "client0_medical",
+      "n_stays": 36152,
+      "prevalence": 0.16113
+    },
+    "1": {
+      "name": "client1_surgical",
+      "n_stays": 23483,
+      "prevalence": 0.11502
+    },
+    "2": {
+      "name": "client2_cardiac",
+      "n_stays": 32743,
+      "prevalence": 0.06914
+    }
+  },
+  "cells": {
+    "snas:clean": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.94757,
+          "auroc_std": 0.000358,
+          "auprc_mean": 0.832201,
+          "auprc_std": 0.000728,
+          "f1_mean": 0.671428,
+          "f1_std": 0.005617,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968184,
+          "auroc_std": 0.000255,
+          "auprc_mean": 0.863865,
+          "auprc_std": 0.000746,
+          "f1_mean": 0.719614,
+          "f1_std": 0.006872,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.979682,
+          "auroc_std": 0.000198,
+          "auprc_mean": 0.846467,
+          "auprc_std": 0.001508,
+          "f1_mean": 0.692319,
+          "f1_std": 0.008345,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.965145,
+      "macro_auroc_std": 0.000139,
+      "macro_auprc_mean": 0.847511,
+      "macro_auprc_std": 0.000373,
+      "macro_f1_mean": 0.694454,
+      "macro_f1_std": 0.004898
+    },
+    "snas:E1_gradient_scaling": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.939512,
+          "auroc_std": 0.000423,
+          "auprc_mean": 0.810586,
+          "auprc_std": 0.000995,
+          "f1_mean": 0.66083,
+          "f1_std": 0.004947,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968647,
+          "auroc_std": 0.000414,
+          "auprc_mean": 0.866676,
+          "auprc_std": 0.000611,
+          "f1_mean": 0.710302,
+          "f1_std": 0.008172,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.975766,
+          "auroc_std": 0.000262,
+          "auprc_mean": 0.829758,
+          "auprc_std": 0.001052,
+          "f1_mean": 0.639617,
+          "f1_std": 0.009684,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.961308,
+      "macro_auroc_std": 0.000137,
+      "macro_auprc_mean": 0.835673,
+      "macro_auprc_std": 0.000609,
+      "macro_f1_mean": 0.67025,
+      "macro_f1_std": 0.006293
+    },
+    "snas:E2_free_rider": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.883452,
+          "auroc_std": 0.007935,
+          "auprc_mean": 0.663796,
+          "auprc_std": 0.027544,
+          "f1_mean": 0.604262,
+          "f1_std": 0.015839,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.924745,
+          "auroc_std": 0.006403,
+          "auprc_mean": 0.702294,
+          "auprc_std": 0.020379,
+          "f1_mean": 0.638615,
+          "f1_std": 0.029226,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.919902,
+          "auroc_std": 0.007985,
+          "auprc_mean": 0.650676,
+          "auprc_std": 0.030581,
+          "f1_mean": 0.574331,
+          "f1_std": 0.03247,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.909366,
+      "macro_auroc_std": 0.007025,
+      "macro_auprc_mean": 0.672255,
+      "macro_auprc_std": 0.025312,
+      "macro_f1_mean": 0.605736,
+      "macro_f1_std": 0.022852
+    },
+    "snas:E4_attack_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.93909,
+          "auroc_std": 0.000522,
+          "auprc_mean": 0.811151,
+          "auprc_std": 0.001666,
+          "f1_mean": 0.663707,
+          "f1_std": 0.006775,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968937,
+          "auroc_std": 0.000524,
+          "auprc_mean": 0.865971,
+          "auprc_std": 0.001097,
+          "f1_mean": 0.69705,
+          "f1_std": 0.00733,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.970529,
+          "auroc_std": 0.000722,
+          "auprc_mean": 0.812359,
+          "auprc_std": 0.002251,
+          "f1_mean": 0.628714,
+          "f1_std": 0.009139,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.959519,
+      "macro_auroc_std": 0.000427,
+      "macro_auprc_mean": 0.829827,
+      "macro_auprc_std": 0.001445,
+      "macro_f1_mean": 0.663157,
+      "macro_f1_std": 0.005537
+    },
+    "snas:E6_honest_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.952133,
+          "auroc_std": 0.000178,
+          "auprc_mean": 0.845127,
+          "auprc_std": 0.000853,
+          "f1_mean": 0.680331,
+          "f1_std": 0.006822,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968311,
+          "auroc_std": 0.000684,
+          "auprc_mean": 0.864933,
+          "auprc_std": 0.001325,
+          "f1_mean": 0.708501,
+          "f1_std": 0.010499,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.977303,
+          "auroc_std": 0.000493,
+          "auprc_mean": 0.83303,
+          "auprc_std": 0.001651,
+          "f1_mean": 0.652927,
+          "f1_std": 0.009678,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.965915,
+      "macro_auroc_std": 0.000226,
+      "macro_auprc_mean": 0.847697,
+      "macro_auprc_std": 0.000413,
+      "macro_f1_mean": 0.680586,
+      "macro_f1_std": 0.006697
+    },
+    "snas:E3_label_flip": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.925447,
+          "auroc_std": 0.00152,
+          "auprc_mean": 0.775092,
+          "auprc_std": 0.005665,
+          "f1_mean": 0.665062,
+          "f1_std": 0.007945,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.958153,
+          "auroc_std": 0.002222,
+          "auprc_mean": 0.814395,
+          "auprc_std": 0.006128,
+          "f1_mean": 0.716994,
+          "f1_std": 0.011799,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.966958,
+          "auroc_std": 0.00192,
+          "auprc_mean": 0.789125,
+          "auprc_std": 0.005113,
+          "f1_mean": 0.644315,
+          "f1_std": 0.015945,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.950186,
+      "macro_auroc_std": 0.001522,
+      "macro_auprc_mean": 0.792871,
+      "macro_auprc_std": 0.004395,
+      "macro_f1_mean": 0.675457,
+      "macro_f1_std": 0.010411
+    },
+    "snas:E5_backdoor": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.728133,
+          "auroc_std": 0.00609,
+          "auprc_mean": 0.321894,
+          "auprc_std": 0.009628,
+          "f1_mean": 0.414301,
+          "f1_std": 0.009425,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.643302,
+          "auroc_std": 0.009465,
+          "auprc_mean": 0.22534,
+          "auprc_std": 0.010167,
+          "f1_mean": 0.307715,
+          "f1_std": 0.007709,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.730835,
+          "auroc_std": 0.006171,
+          "auprc_mean": 0.190354,
+          "auprc_std": 0.005863,
+          "f1_mean": 0.278004,
+          "f1_std": 0.023022,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.700757,
+      "macro_auroc_std": 0.006131,
+      "macro_auprc_mean": 0.245863,
+      "macro_auprc_std": 0.008178,
+      "macro_f1_mean": 0.33334,
+      "macro_f1_std": 0.010594
+    },
+    "krum:E1_gradient_scaling": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.95362,
+          "auroc_std": 0.000479,
+          "auprc_mean": 0.850583,
+          "auprc_std": 0.000776,
+          "f1_mean": 0.70037,
+          "f1_std": 0.006919,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.964874,
+          "auroc_std": 0.000762,
+          "auprc_mean": 0.855251,
+          "auprc_std": 0.001502,
+          "f1_mean": 0.684053,
+          "f1_std": 0.012326,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.975326,
+          "auroc_std": 0.000697,
+          "auprc_mean": 0.821007,
+          "auprc_std": 0.003372,
+          "f1_mean": 0.64604,
+          "f1_std": 0.011339,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.964607,
+      "macro_auroc_std": 0.000468,
+      "macro_auprc_mean": 0.84228,
+      "macro_auprc_std": 0.00122,
+      "macro_f1_mean": 0.676821,
+      "macro_f1_std": 0.007389
+    },
+    "krum:E2_free_rider": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.953697,
+          "auroc_std": 0.000489,
+          "auprc_mean": 0.850558,
+          "auprc_std": 0.000612,
+          "f1_mean": 0.699998,
+          "f1_std": 0.006705,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.964859,
+          "auroc_std": 0.000621,
+          "auprc_mean": 0.855421,
+          "auprc_std": 0.001475,
+          "f1_mean": 0.684659,
+          "f1_std": 0.008204,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.975576,
+          "auroc_std": 0.00075,
+          "auprc_mean": 0.82142,
+          "auprc_std": 0.003242,
+          "f1_mean": 0.647106,
+          "f1_std": 0.008167,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.964711,
+      "macro_auroc_std": 0.000434,
+      "macro_auprc_mean": 0.842466,
+      "macro_auprc_std": 0.001088,
+      "macro_f1_mean": 0.677254,
+      "macro_f1_std": 0.00613
+    },
+    "krum:E4_attack_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.95362,
+          "auroc_std": 0.000479,
+          "auprc_mean": 0.850583,
+          "auprc_std": 0.000776,
+          "f1_mean": 0.70037,
+          "f1_std": 0.006919,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.964874,
+          "auroc_std": 0.000762,
+          "auprc_mean": 0.855251,
+          "auprc_std": 0.001502,
+          "f1_mean": 0.684053,
+          "f1_std": 0.012326,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.975326,
+          "auroc_std": 0.000697,
+          "auprc_mean": 0.821007,
+          "auprc_std": 0.003372,
+          "f1_mean": 0.64604,
+          "f1_std": 0.011339,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.964607,
+      "macro_auroc_std": 0.000468,
+      "macro_auprc_mean": 0.84228,
+      "macro_auprc_std": 0.00122,
+      "macro_f1_mean": 0.676821,
+      "macro_f1_std": 0.007389
+    },
+    "trimmed_mean:E1_gradient_scaling": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.933623,
+          "auroc_std": 0.000792,
+          "auprc_mean": 0.799629,
+          "auprc_std": 0.000909,
+          "f1_mean": 0.671772,
+          "f1_std": 0.003752,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967267,
+          "auroc_std": 0.000669,
+          "auprc_mean": 0.86247,
+          "auprc_std": 0.001125,
+          "f1_mean": 0.714745,
+          "f1_std": 0.006901,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.969867,
+          "auroc_std": 0.000753,
+          "auprc_mean": 0.812029,
+          "auprc_std": 0.001531,
+          "f1_mean": 0.636831,
+          "f1_std": 0.009133,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.956919,
+      "macro_auroc_std": 0.000466,
+      "macro_auprc_mean": 0.824709,
+      "macro_auprc_std": 0.000743,
+      "macro_f1_mean": 0.674449,
+      "macro_f1_std": 0.005135
+    },
+    "trimmed_mean:E2_free_rider": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.78946,
+          "auroc_std": 0.014363,
+          "auprc_mean": 0.434057,
+          "auprc_std": 0.03321,
+          "f1_mean": 0.370515,
+          "f1_std": 0.037827,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.843574,
+          "auroc_std": 0.022875,
+          "auprc_mean": 0.457041,
+          "auprc_std": 0.05321,
+          "f1_mean": 0.430418,
+          "f1_std": 0.051027,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.839509,
+          "auroc_std": 0.023411,
+          "auprc_mean": 0.383272,
+          "auprc_std": 0.060216,
+          "f1_mean": 0.376369,
+          "f1_std": 0.056704,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.824181,
+      "macro_auroc_std": 0.018906,
+      "macro_auprc_mean": 0.42479,
+      "macro_auprc_std": 0.04732,
+      "macro_f1_mean": 0.392434,
+      "macro_f1_std": 0.045447
+    },
+    "trimmed_mean:E4_attack_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.932807,
+          "auroc_std": 0.000994,
+          "auprc_mean": 0.798247,
+          "auprc_std": 0.001201,
+          "f1_mean": 0.670501,
+          "f1_std": 0.004392,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967376,
+          "auroc_std": 0.000668,
+          "auprc_mean": 0.862633,
+          "auprc_std": 0.001082,
+          "f1_mean": 0.71505,
+          "f1_std": 0.008216,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.967777,
+          "auroc_std": 0.000851,
+          "auprc_mean": 0.804977,
+          "auprc_std": 0.001747,
+          "f1_mean": 0.632409,
+          "f1_std": 0.008637,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.955986,
+      "macro_auroc_std": 0.00056,
+      "macro_auprc_mean": 0.821952,
+      "macro_auprc_std": 0.000793,
+      "macro_f1_mean": 0.672653,
+      "macro_f1_std": 0.004998
+    },
+    "median:E1_gradient_scaling": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.946106,
+          "auroc_std": 0.000368,
+          "auprc_mean": 0.828487,
+          "auprc_std": 0.000901,
+          "f1_mean": 0.676782,
+          "f1_std": 0.005589,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967496,
+          "auroc_std": 0.000245,
+          "auprc_mean": 0.861768,
+          "auprc_std": 0.000912,
+          "f1_mean": 0.717103,
+          "f1_std": 0.010755,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.979544,
+          "auroc_std": 0.000403,
+          "auprc_mean": 0.846787,
+          "auprc_std": 0.001189,
+          "f1_mean": 0.685667,
+          "f1_std": 0.010396,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.964382,
+      "macro_auroc_std": 0.000194,
+      "macro_auprc_mean": 0.845681,
+      "macro_auprc_std": 0.000672,
+      "macro_f1_mean": 0.693184,
+      "macro_f1_std": 0.00717
+    },
+    "median:E2_free_rider": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.949313,
+          "auroc_std": 0.000399,
+          "auprc_mean": 0.837028,
+          "auprc_std": 0.000981,
+          "f1_mean": 0.668469,
+          "f1_std": 0.006977,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968111,
+          "auroc_std": 0.000833,
+          "auprc_mean": 0.862863,
+          "auprc_std": 0.001496,
+          "f1_mean": 0.716995,
+          "f1_std": 0.009203,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.976743,
+          "auroc_std": 0.000653,
+          "auprc_mean": 0.831201,
+          "auprc_std": 0.002759,
+          "f1_mean": 0.647343,
+          "f1_std": 0.014403,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.964722,
+      "macro_auroc_std": 0.000408,
+      "macro_auprc_mean": 0.843697,
+      "macro_auprc_std": 0.000935,
+      "macro_f1_mean": 0.677602,
+      "macro_f1_std": 0.008357
+    },
+    "median:E4_attack_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.932541,
+          "auroc_std": 0.000304,
+          "auprc_mean": 0.797449,
+          "auprc_std": 0.000609,
+          "f1_mean": 0.669127,
+          "f1_std": 0.003696,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.96701,
+          "auroc_std": 0.00079,
+          "auprc_mean": 0.862461,
+          "auprc_std": 0.001262,
+          "f1_mean": 0.712453,
+          "f1_std": 0.00873,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.96801,
+          "auroc_std": 0.000698,
+          "auprc_mean": 0.805766,
+          "auprc_std": 0.00154,
+          "f1_mean": 0.63208,
+          "f1_std": 0.012705,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.955854,
+      "macro_auroc_std": 0.00038,
+      "macro_auprc_mean": 0.821892,
+      "macro_auprc_std": 0.000862,
+      "macro_f1_mean": 0.67122,
+      "macro_f1_std": 0.006972
+    },
+    "fltrust:E1_gradient_scaling": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.936888,
+          "auroc_std": 0.000376,
+          "auprc_mean": 0.804607,
+          "auprc_std": 0.0012,
+          "f1_mean": 0.664261,
+          "f1_std": 0.004505,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967713,
+          "auroc_std": 0.000609,
+          "auprc_mean": 0.862943,
+          "auprc_std": 0.000813,
+          "f1_mean": 0.721128,
+          "f1_std": 0.007406,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.973207,
+          "auroc_std": 0.000481,
+          "auprc_mean": 0.819344,
+          "auprc_std": 0.001269,
+          "f1_mean": 0.643866,
+          "f1_std": 0.009806,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.959269,
+      "macro_auroc_std": 0.00025,
+      "macro_auprc_mean": 0.828965,
+      "macro_auprc_std": 0.000694,
+      "macro_f1_mean": 0.676418,
+      "macro_f1_std": 0.00593
+    },
+    "fltrust:E2_free_rider": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.849743,
+          "auroc_std": 0.010212,
+          "auprc_mean": 0.556976,
+          "auprc_std": 0.03553,
+          "f1_mean": 0.51836,
+          "f1_std": 0.038171,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.888435,
+          "auroc_std": 0.015008,
+          "auprc_mean": 0.583383,
+          "auprc_std": 0.046778,
+          "f1_mean": 0.550841,
+          "f1_std": 0.046043,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.8903,
+          "auroc_std": 0.016674,
+          "auprc_mean": 0.523929,
+          "auprc_std": 0.058152,
+          "f1_mean": 0.506582,
+          "f1_std": 0.047871,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.876159,
+      "macro_auroc_std": 0.013401,
+      "macro_auprc_mean": 0.554763,
+      "macro_auprc_std": 0.045238,
+      "macro_f1_mean": 0.525261,
+      "macro_f1_std": 0.04084
+    },
+    "fltrust:E4_attack_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.936064,
+          "auroc_std": 0.000457,
+          "auprc_mean": 0.803223,
+          "auprc_std": 0.00107,
+          "f1_mean": 0.669273,
+          "f1_std": 0.004911,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967705,
+          "auroc_std": 0.000633,
+          "auprc_mean": 0.8629,
+          "auprc_std": 0.000777,
+          "f1_mean": 0.720649,
+          "f1_std": 0.00749,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.971027,
+          "auroc_std": 0.0006,
+          "auprc_mean": 0.812088,
+          "auprc_std": 0.001212,
+          "f1_mean": 0.638099,
+          "f1_std": 0.010422,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.958265,
+      "macro_auroc_std": 0.000319,
+      "macro_auprc_mean": 0.826071,
+      "macro_auprc_std": 0.000632,
+      "macro_f1_mean": 0.676007,
+      "macro_f1_std": 0.005857
+    },
+    "nodetect:E1_gradient_scaling": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.935093,
+          "auroc_std": 0.000548,
+          "auprc_mean": 0.802166,
+          "auprc_std": 0.000732,
+          "f1_mean": 0.672894,
+          "f1_std": 0.003909,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967433,
+          "auroc_std": 0.000638,
+          "auprc_mean": 0.863114,
+          "auprc_std": 0.001122,
+          "f1_mean": 0.708933,
+          "f1_std": 0.007827,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.970998,
+          "auroc_std": 0.000458,
+          "auprc_mean": 0.81612,
+          "auprc_std": 0.001431,
+          "f1_mean": 0.637765,
+          "f1_std": 0.011307,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.957841,
+      "macro_auroc_std": 0.000167,
+      "macro_auprc_mean": 0.827133,
+      "macro_auprc_std": 0.000709,
+      "macro_f1_mean": 0.673198,
+      "macro_f1_std": 0.006257
+    },
+    "nodetect:E2_free_rider": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.779352,
+          "auroc_std": 0.01495,
+          "auprc_mean": 0.405184,
+          "auprc_std": 0.021719,
+          "f1_mean": 0.314341,
+          "f1_std": 0.048433,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.827356,
+          "auroc_std": 0.01423,
+          "auprc_mean": 0.414076,
+          "auprc_std": 0.042643,
+          "f1_mean": 0.362004,
+          "f1_std": 0.057211,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.835573,
+          "auroc_std": 0.018001,
+          "auprc_mean": 0.347826,
+          "auprc_std": 0.037645,
+          "f1_mean": 0.321698,
+          "f1_std": 0.055446,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.814094,
+      "macro_auroc_std": 0.013653,
+      "macro_auprc_mean": 0.389029,
+      "macro_auprc_std": 0.032076,
+      "macro_f1_mean": 0.332681,
+      "macro_f1_std": 0.052036
+    },
+    "nodetect:E4_attack_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.934245,
+          "auroc_std": 0.000362,
+          "auprc_mean": 0.800904,
+          "auprc_std": 0.000619,
+          "f1_mean": 0.671318,
+          "f1_std": 0.004058,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967467,
+          "auroc_std": 0.000698,
+          "auprc_mean": 0.863637,
+          "auprc_std": 0.001184,
+          "f1_mean": 0.71112,
+          "f1_std": 0.008632,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.968386,
+          "auroc_std": 0.000634,
+          "auprc_mean": 0.807361,
+          "auprc_std": 0.001427,
+          "f1_mean": 0.632248,
+          "f1_std": 0.013337,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.956699,
+      "macro_auroc_std": 0.000302,
+      "macro_auprc_mean": 0.823967,
+      "macro_auprc_std": 0.000773,
+      "macro_f1_mean": 0.671562,
+      "macro_f1_std": 0.00687
+    },
+    "nodetect:E6_honest_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.951975,
+          "auroc_std": 0.000396,
+          "auprc_mean": 0.844651,
+          "auprc_std": 0.000698,
+          "f1_mean": 0.683234,
+          "f1_std": 0.007052,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968054,
+          "auroc_std": 0.000394,
+          "auprc_mean": 0.864836,
+          "auprc_std": 0.001482,
+          "f1_mean": 0.70966,
+          "f1_std": 0.010869,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.977375,
+          "auroc_std": 0.000584,
+          "auprc_mean": 0.83313,
+          "auprc_std": 0.001562,
+          "f1_mean": 0.653126,
+          "f1_std": 0.009043,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.965801,
+      "macro_auroc_std": 0.000383,
+      "macro_auprc_mean": 0.847539,
+      "macro_auprc_std": 0.000881,
+      "macro_f1_mean": 0.682007,
+      "macro_f1_std": 0.006533
+    },
+    "cliponly:E1_gradient_scaling": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.937378,
+          "auroc_std": 0.000474,
+          "auprc_mean": 0.805742,
+          "auprc_std": 0.00081,
+          "f1_mean": 0.673071,
+          "f1_std": 0.005207,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968203,
+          "auroc_std": 0.000496,
+          "auprc_mean": 0.864383,
+          "auprc_std": 0.001007,
+          "f1_mean": 0.702489,
+          "f1_std": 0.007318,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.973256,
+          "auroc_std": 0.000354,
+          "auprc_mean": 0.821856,
+          "auprc_std": 0.001293,
+          "f1_mean": 0.632388,
+          "f1_std": 0.011193,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.959612,
+      "macro_auroc_std": 0.000118,
+      "macro_auprc_mean": 0.83066,
+      "macro_auprc_std": 0.000703,
+      "macro_f1_mean": 0.669316,
+      "macro_f1_std": 0.006389
+    },
+    "cliponly:E2_free_rider": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.824889,
+          "auroc_std": 0.009508,
+          "auprc_mean": 0.472932,
+          "auprc_std": 0.021488,
+          "f1_mean": 0.424421,
+          "f1_std": 0.039786,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.872742,
+          "auroc_std": 0.010847,
+          "auprc_mean": 0.522664,
+          "auprc_std": 0.040126,
+          "f1_mean": 0.474393,
+          "f1_std": 0.046766,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.877946,
+          "auroc_std": 0.011597,
+          "auprc_mean": 0.440701,
+          "auprc_std": 0.035029,
+          "f1_mean": 0.436551,
+          "f1_std": 0.041795,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.858525,
+      "macro_auroc_std": 0.009575,
+      "macro_auprc_mean": 0.478766,
+      "macro_auprc_std": 0.030105,
+      "macro_f1_mean": 0.445122,
+      "macro_f1_std": 0.041042
+    },
+    "cliponly:E4_attack_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.936279,
+          "auroc_std": 0.000465,
+          "auprc_mean": 0.804352,
+          "auprc_std": 0.000771,
+          "f1_mean": 0.675148,
+          "f1_std": 0.005038,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968283,
+          "auroc_std": 0.000551,
+          "auprc_mean": 0.864688,
+          "auprc_std": 0.001135,
+          "f1_mean": 0.702175,
+          "f1_std": 0.007713,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.969257,
+          "auroc_std": 0.00046,
+          "auprc_mean": 0.808891,
+          "auprc_std": 0.001369,
+          "f1_mean": 0.627558,
+          "f1_std": 0.012607,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.95794,
+      "macro_auroc_std": 0.000144,
+      "macro_auprc_mean": 0.825977,
+      "macro_auprc_std": 0.000758,
+      "macro_f1_mean": 0.668294,
+      "macro_f1_std": 0.006953
+    },
+    "cliponly:E6_honest_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.951955,
+          "auroc_std": 0.000401,
+          "auprc_mean": 0.844597,
+          "auprc_std": 0.000766,
+          "f1_mean": 0.683145,
+          "f1_std": 0.00681,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968051,
+          "auroc_std": 0.000382,
+          "auprc_mean": 0.864788,
+          "auprc_std": 0.001552,
+          "f1_mean": 0.709761,
+          "f1_std": 0.010438,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.977383,
+          "auroc_std": 0.000449,
+          "auprc_mean": 0.832904,
+          "auprc_std": 0.001333,
+          "f1_mean": 0.653107,
+          "f1_std": 0.009071,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.965797,
+      "macro_auroc_std": 0.000355,
+      "macro_auprc_mean": 0.84743,
+      "macro_auprc_std": 0.000815,
+      "macro_f1_mean": 0.682004,
+      "macro_f1_std": 0.006139
+    },
+    "gateonly:E1_gradient_scaling": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.936065,
+          "auroc_std": 0.000791,
+          "auprc_mean": 0.803448,
+          "auprc_std": 0.001075,
+          "f1_mean": 0.674327,
+          "f1_std": 0.004531,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967684,
+          "auroc_std": 0.000595,
+          "auprc_mean": 0.863174,
+          "auprc_std": 0.001207,
+          "f1_mean": 0.705031,
+          "f1_std": 0.007415,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.971652,
+          "auroc_std": 0.000454,
+          "auprc_mean": 0.81728,
+          "auprc_std": 0.001614,
+          "f1_mean": 0.634299,
+          "f1_std": 0.011703,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.958467,
+      "macro_auroc_std": 0.000262,
+      "macro_auprc_mean": 0.827967,
+      "macro_auprc_std": 0.000868,
+      "macro_f1_mean": 0.671219,
+      "macro_f1_std": 0.00667
+    },
+    "gateonly:E2_free_rider": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.875208,
+          "auroc_std": 0.009622,
+          "auprc_mean": 0.63138,
+          "auprc_std": 0.036198,
+          "f1_mean": 0.582779,
+          "f1_std": 0.022351,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.914104,
+          "auroc_std": 0.011075,
+          "auprc_mean": 0.662404,
+          "auprc_std": 0.03489,
+          "f1_mean": 0.607876,
+          "f1_std": 0.034983,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.911314,
+          "auroc_std": 0.009864,
+          "auprc_mean": 0.610284,
+          "auprc_std": 0.051857,
+          "f1_mean": 0.552362,
+          "f1_std": 0.037322,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.900209,
+      "macro_auroc_std": 0.009743,
+      "macro_auprc_mean": 0.634689,
+      "macro_auprc_std": 0.039852,
+      "macro_f1_mean": 0.581006,
+      "macro_f1_std": 0.028259
+    },
+    "gateonly:E4_attack_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.934688,
+          "auroc_std": 0.000467,
+          "auprc_mean": 0.801615,
+          "auprc_std": 0.000754,
+          "f1_mean": 0.672791,
+          "f1_std": 0.003873,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967723,
+          "auroc_std": 0.000666,
+          "auprc_mean": 0.864216,
+          "auprc_std": 0.00113,
+          "f1_mean": 0.708804,
+          "f1_std": 0.008037,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.968564,
+          "auroc_std": 0.000569,
+          "auprc_mean": 0.807671,
+          "auprc_std": 0.001361,
+          "f1_mean": 0.630773,
+          "f1_std": 0.013532,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.956992,
+      "macro_auroc_std": 0.00026,
+      "macro_auprc_mean": 0.8245,
+      "macro_auprc_std": 0.000761,
+      "macro_f1_mean": 0.67079,
+      "macro_f1_std": 0.006888
+    },
+    "gateonly:E6_honest_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.952004,
+          "auroc_std": 0.000395,
+          "auprc_mean": 0.844755,
+          "auprc_std": 0.000691,
+          "f1_mean": 0.683164,
+          "f1_std": 0.007122,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.968037,
+          "auroc_std": 0.000381,
+          "auprc_mean": 0.864783,
+          "auprc_std": 0.001515,
+          "f1_mean": 0.71009,
+          "f1_std": 0.01001,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.977395,
+          "auroc_std": 0.000551,
+          "auprc_mean": 0.833178,
+          "auprc_std": 0.001445,
+          "f1_mean": 0.653055,
+          "f1_std": 0.009686,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.965812,
+      "macro_auroc_std": 0.000377,
+      "macro_auprc_mean": 0.847572,
+      "macro_auprc_std": 0.000762,
+      "macro_f1_mean": 0.682103,
+      "macro_f1_std": 0.006578
+    },
+    "deltadet:E1_gradient_scaling": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.93509,
+          "auroc_std": 0.00055,
+          "auprc_mean": 0.802166,
+          "auprc_std": 0.000732,
+          "f1_mean": 0.672886,
+          "f1_std": 0.003921,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967437,
+          "auroc_std": 0.000645,
+          "auprc_mean": 0.863109,
+          "auprc_std": 0.001122,
+          "f1_mean": 0.708818,
+          "f1_std": 0.007824,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.971002,
+          "auroc_std": 0.000457,
+          "auprc_mean": 0.816122,
+          "auprc_std": 0.001432,
+          "f1_mean": 0.637748,
+          "f1_std": 0.011396,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.957843,
+      "macro_auroc_std": 0.000169,
+      "macro_auprc_mean": 0.827132,
+      "macro_auprc_std": 0.000709,
+      "macro_f1_mean": 0.673151,
+      "macro_f1_std": 0.006288
+    },
+    "deltadet:E2_free_rider": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.779359,
+          "auroc_std": 0.014947,
+          "auprc_mean": 0.405186,
+          "auprc_std": 0.021719,
+          "f1_mean": 0.314355,
+          "f1_std": 0.048442,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.827357,
+          "auroc_std": 0.014228,
+          "auprc_mean": 0.414078,
+          "auprc_std": 0.042642,
+          "f1_mean": 0.362053,
+          "f1_std": 0.057381,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.835576,
+          "auroc_std": 0.017998,
+          "auprc_mean": 0.347804,
+          "auprc_std": 0.03764,
+          "f1_mean": 0.321799,
+          "f1_std": 0.055556,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.814098,
+      "macro_auroc_std": 0.013649,
+      "macro_auprc_mean": 0.389023,
+      "macro_auprc_std": 0.032074,
+      "macro_f1_mean": 0.332736,
+      "macro_f1_std": 0.052133
+    },
+    "deltadet:E4_attack_straggler": {
+      "n_seeds": 10,
+      "clients": {
+        "0": {
+          "auroc_mean": 0.93424,
+          "auroc_std": 0.000366,
+          "auprc_mean": 0.800901,
+          "auprc_std": 0.000622,
+          "f1_mean": 0.671426,
+          "f1_std": 0.004116,
+          "n_seeds": 10
+        },
+        "1": {
+          "auroc_mean": 0.967473,
+          "auroc_std": 0.000707,
+          "auprc_mean": 0.863633,
+          "auprc_std": 0.001183,
+          "f1_mean": 0.710932,
+          "f1_std": 0.008615,
+          "n_seeds": 10
+        },
+        "2": {
+          "auroc_mean": 0.968388,
+          "auroc_std": 0.000634,
+          "auprc_mean": 0.807384,
+          "auprc_std": 0.001426,
+          "f1_mean": 0.632215,
+          "f1_std": 0.013327,
+          "n_seeds": 10
+        }
+      },
+      "macro_auroc_mean": 0.9567,
+      "macro_auroc_std": 0.000303,
+      "macro_auprc_mean": 0.823973,
+      "macro_auprc_std": 0.00077,
+      "macro_f1_mean": 0.671524,
+      "macro_f1_std": 0.006852
+    }
+  },
+  "unmatched_runs": [],
+  "duplicate_matches_resolved_to_newest": [
+    "snas:E1_gradient_scaling seed42 (2 identical runs)"
+  ]
+}

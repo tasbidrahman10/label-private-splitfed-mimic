@@ -10,8 +10,8 @@ from pydantic import BaseModel
 from sfl.common.config import load_yaml
 from sfl.common.serialization import base64_to_state_dict, state_dict_to_base64
 from sfl.server.baseline_aggregators import (
-    flat_to_state_dict, fltrust_aggregate, krum_aggregate,
-    state_dict_to_flat, trimmed_mean_aggregate,
+    coordinate_median_aggregate, flat_to_state_dict, fltrust_aggregate,
+    krum_aggregate, state_dict_to_flat, trimmed_mean_aggregate,
 )
 from sfl.server.state import ClientRegistration, ServerState
 from sfl.server.trainer import (
@@ -139,6 +139,11 @@ async def _process_round_baseline(
 
         elif aggregator == "trimmed_mean":
             new_flat = trimmed_mean_aggregate(flat_submissions, trim_ratio=0.2)
+
+        elif aggregator == "median":
+            # P1-3: the non-degenerate robust baseline at n=3. Trimmed mean at
+            # trim_ratio=0.2 trims zero coordinates here and is plain FedAvg.
+            new_flat = coordinate_median_aggregate(flat_submissions)
 
         elif aggregator == "fltrust":
             # Compute root gradient: run root data through global encoder + server model
@@ -277,6 +282,7 @@ async def _process_round(state: ServerState, submitted: dict) -> None:
       'snas'         -> full SNAS pipeline (gate + RobustAsyncFedAvg)
       'krum'         -> Krum selection (no staleness, no gate)
       'trimmed_mean' -> coordinate-wise trimmed mean (no staleness, no gate)
+      'median'       -> coordinate-wise median (no staleness, no gate)
       'fltrust'      -> FLTrust trust-weighted aggregation (no staleness, no gate)
     """
     aggregator = state.config.get("aggregator_type", "snas")
@@ -305,7 +311,11 @@ async def _process_round(state: ServerState, submitted: dict) -> None:
 
             if activations is not None:
                 snas_info = state.gate.snas_metrics(
-                    cid, activations, weights, state.prev_global_encoder, tau
+                    cid, activations, weights, state.prev_global_encoder, tau,
+                    # Every submission this round: the delta basis needs the
+                    # peers to build its leave-one-out reference. Ignored by
+                    # the default absolute basis.
+                    all_submissions=submitted,
                 )
                 snas = snas_info["snas"] or 0.0
             else:

@@ -1,0 +1,40 @@
+% ---------------------------------------------------------------------------
+% PRESERVED EXCERPT — evasion/influence tradeoff (tab:tradeoff)
+%
+% Rescued from `writing contents/main.tex` (the pre-P0 draft, 2026-07-12)
+% before that file was deleted on 2026-08-21. This block exists ONLY there:
+% Nihal's `main .tex` has no tab:tradeoff, and its "Robustness boundary"
+% subsection jumps straight from the alternation paragraph to "A natural
+% mitigation is temporal accumulation".
+%
+% The argument is ANALYTIC (it depends only on the decay function
+% d(tau)=e^{-0.5 tau}, not on any measured AUROC), so the 266->265 feature
+% change does NOT invalidate it. It can be pasted back into the Robustness
+% boundary subsection unchanged if wanted.
+%
+% It argues the attack-then-abstain evasion is self-limiting: raising tau
+% lowers the SNAS score but also lowers both attack frequency and aggregation
+% weight, so effective poisoning collapses. That is a defensive point, so
+% dropping it weakens the discussion rather than shortening it.
+% ---------------------------------------------------------------------------
+
+However, this vulnerability is inherently self-limiting, because the staleness counter $\tau$ enters the framework in two places with opposing effects for the attacker. In the detection gate, $\tau$ appears in the denominator $1/(1+\tau)$, so increasing $\tau$ lowers the SNAS score and aids evasion. But $\tau$ \emph{also} governs the aggregation weight through the staleness decay $d(\tau)$ (Section~\ref{sec:agg}): a stale submission is weighted by $d(\tau)$, which \emph{decreases} in $\tau$. An attacker therefore cannot raise $\tau$ to shrink its detection score without simultaneously shrinking its influence on the aggregate. Moreover, to hold a fixed staleness $\tau$ at every malicious submission, the adversary must abstain for $\tau$ rounds between attacks, so it poisons at most a $1/(1+\tau)$ fraction of rounds. The effective poisoning power --- the product of attack frequency and per-submission aggregation weight --- therefore collapses as $\tau$ grows.
+
+\begin{table}[t]
+\caption{Evasion--influence tradeoff for the attack-then-abstain adversary under the default exponential decay $d(\tau)=e^{-0.5\tau}$. A larger $\tau$ lowers the SNAS score (aiding evasion) but simultaneously lowers both the attack frequency and the per-submission aggregation weight, so the effective poisoning power collapses.}
+\label{tab:tradeoff}
+\centering
+\begin{tabular}{ccccc}
+\toprule
+Staleness $\tau$ & SNAS factor $\tfrac{1}{1+\tau}$ & Attack frequency & Agg.\ weight $d(\tau)$ & Effective poisoning $\propto$ freq $\times\, d(\tau)$ \\
+\midrule
+1 & 0.50 & 1/2 & 0.61 & 0.30 \\
+2 & 0.33 & 1/3 & 0.37 & 0.12 \\
+3 & 0.25 & 1/4 & 0.22 & 0.056 \\
+6 & 0.14 & 1/7 & 0.05 & 0.007 \\
+7 & 0.13 & 1/8 & 0.03 & 0.004 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:tradeoff} makes this explicit under the default exponential decay. The attack-then-abstain strategy is most damaging at $\tau=1$ --- the minimum abstention that still yields the evasion benefit --- which is exactly the configuration evaluated in Table~\ref{tab:adaptive}, where the AUROC degradation is only $-0.006$. Pushing $\tau$ to $6$ or $7$ shrinks the SNAS score further, but the attacker then submits only once every seven or eight rounds, and each submission carries roughly $3$--$5\%$ weight, reducing effective poisoning power by more than an order of magnitude relative to $\tau=1$. Under step decay the attacker retains full weight while $\tau$ stays within the cutoff (which is why step decay shows the largest damage in Table~\ref{tab:adaptive}), but any $\tau$ beyond the cutoff removes it from aggregation entirely. The staleness-normalized gate thus admits an evasion window, yet the same staleness that opens it caps the harm an evading attacker can inflict.

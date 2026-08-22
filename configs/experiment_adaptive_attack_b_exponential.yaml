@@ -1,0 +1,35 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Paper Experiment E1 — Gradient scaling attack on Client 1 (Surgical).
+  Client 1 submits encoder weights scaled by 10x every round. No stale clients.
+  Tests whether SNAS detects a consistently adversarial client and quarantines it.
+  Expected: Client 1 flagged/quarantined within 3-5 rounds (after warm-up).
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/adaptive_attack_b_exponential
+
+fedavg_wait_seconds: 120.0
+
+delay_config:
+  0: 0
+  1: 5
+  2: 10
+
+attack_config:
+  1:
+    type: gradient_scaling
+    params:
+      scale: 10.0
+
+# Adaptive Attack B (Task 3) -- Strategic Alternation (Attack-Then-Abstain).
+# Attacker submits poisoned update, then deliberately misses next round to
+# reset staleness risk, then attacks again. Tests step-decay exploitability.
+# Odd rounds: attack (5s delay, within window)
+# Even rounds: abstain (30s delay, miss window -- staleness increments)
+delay_schedule:
+  1: [5, 30, 5, 30, 5, 30, 5, 30, 5, 30]
+num_rounds: 10

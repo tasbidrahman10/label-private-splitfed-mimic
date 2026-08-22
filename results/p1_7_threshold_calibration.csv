@@ -1,0 +1,6 @@
+split,cell,flag,quarantine,derived_n_attacker_obs,derived_n_honest_obs,derived_detection_rate,derived_quarantine_rate,derived_false_positive_rate,derived_false_quarantine_rate,paper_n_attacker_obs,paper_n_honest_obs,paper_detection_rate,paper_quarantine_rate,paper_false_positive_rate,paper_false_quarantine_rate
+by_attack,snas:E2_free_rider,0.1636,0.3462,80,160,1.0,1.0,0.0,0.0,80,160,1.0,1.0,0.0,0.0
+by_attack,snas:E4_attack_straggler,0.1636,0.3462,80,80,1.0,0.825,0.075,0.0,80,80,1.0,0.7125,0.0,0.0
+by_attack,snas:E3_label_flip,0.1636,0.3462,80,160,1.0,0.0,0.0,0.0,80,160,1.0,0.0,0.0,0.0
+by_attack,snas:E5_backdoor,0.1636,0.3462,80,160,1.0,0.1125,0.0,0.0,80,160,1.0,0.075,0.0,0.0
+by_seed,all (held-out seeds),0.2049,0.3023,200,480,1.0,0.755,0.0,0.0,200,480,1.0,0.505,0.0,0.0

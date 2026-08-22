@@ -116,7 +116,12 @@ def fig_perround_auroc() -> None:
             continue
         rounds, means = _mean_auroc_per_round(csv_path)
         ax.plot(rounds, means, marker=marker, color=color, lw=1.8, ms=5, label=label)
-    ax.axhline(0.9649, color="#888", ls="--", lw=1.2, label="Sync baseline (0.9649)")
+    # Ten-seed clean baseline, not the retired single-seed 0.9649 sync figure.
+    # In the clean configuration every client submits inside the window, so this
+    # is also the synchronous reference -- and unlike 0.9649 it has a
+    # reproducible config and ten seeds behind it.
+    ax.axhline(CLEAN_BASELINE, color="#888", ls="--", lw=1.2,
+               label=f"Clean baseline ({CLEAN_BASELINE})")
     ax.set_xlabel("Aggregation round")
     ax.set_ylabel("Mean AUROC across three clients")
     ax.set_xticks(range(1, 11))
@@ -131,13 +136,31 @@ def fig_perround_auroc() -> None:
 # Figure 2: baseline / aggregator comparison (no annotation arrow, legend below)
 # ---------------------------------------------------------------------------
 def fig_baseline_comparison() -> None:
+    """Aggregator comparison. Values read from the regenerated 265-feature grid.
+
+    Previously these were hardcoded at the pre-P0-8 266-feature numbers
+    (SNAS 0.9598/0.9050/0.9581), which no longer match any table in the paper.
+    Reading p08_rerun_summary.json keeps the figure and Table 3 in lockstep and
+    means a rerun cannot silently leave the figure behind.
+    """
+    summary = json.load((ROOT / "results" / "p08_rerun_summary.json").open())
+    cells = ["E1_gradient_scaling", "E2_free_rider", "E4_attack_straggler"]
     experiments = ["Exp 1\n(grad. scaling)", "Exp 2\n(free rider)", "Exp 3\n(attack+strag.)"]
+
+    # Order fixes the legend and the bar order; colours are stable across the
+    # paper (SNAS blue, Krum orange) so the new median arm takes an unused hue.
+    series = [
+        ("SNAS (ours)",       "snas",         OKABE["blue"]),
+        ("Krum",              "krum",         OKABE["orange"]),
+        ("Coordinate median", "median",       OKABE["sky"]),
+        ("Trimmed mean",      "trimmed_mean", OKABE["green"]),
+        ("FLTrust",           "fltrust",      OKABE["purple"]),
+    ]
     data = {
-        "SNAS (ours)":  ([0.9598, 0.9050, 0.9581], OKABE["blue"]),
-        "Krum":         ([0.9653, 0.9654, 0.9653], OKABE["orange"]),
-        "Trimmed mean": ([0.9539, 0.8227, 0.9541], OKABE["green"]),
-        "FLTrust":      ([0.9539, 0.8227, 0.9541], OKABE["purple"]),
+        name: ([summary[f"{arm}:{c}"]["mean_auroc"] for c in cells], colour)
+        for name, arm, colour in series
     }
+
     x = np.arange(len(experiments))
     n = len(data)
     w = 0.80 / n
@@ -154,7 +177,8 @@ def fig_baseline_comparison() -> None:
     ax.set_xticklabels(experiments)
     ax.set_ylabel("Mean AUROC (rounds 8--10)")
     ax.set_ylim(0.80, 1.03)
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=4,
+    # Five entries stay on one row; ncol matches the series count as before.
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=5,
               fontsize=9, **BOX)
     fig.tight_layout()
     _save(fig, "fig_baseline_comparison")
@@ -220,34 +244,52 @@ def fig_attack_magnitude() -> None:
 # Figure 4: gate ablation (clean value labels above error bars, legend below)
 # ---------------------------------------------------------------------------
 def fig_ablation() -> None:
-    snas = {d["experiment"]: d for d in json.load((ROOT / "results" / "multiseed_summary.json").open())}
-    nod = {d["experiment"]: d for d in json.load((ROOT / "results" / "gap_closing" / "nodetect.json").open())}
+    """2x2 factorial ablation of the anomaly gate and the norm clip.
+
+    Replaces the earlier two-bar gate ablation, which drew only the both-on and
+    both-off corners and read multiseed_summary.json / gap_closing/nodetect.json
+    -- both pre-P0-8 266-feature files, so the old figure disagreed numerically
+    with every table in the current paper. Source is now the same artifact the
+    table is built from.
+
+    Bar order is the factorial order (neither, clip, gate, both) so the reader
+    reads left-to-right as defences are added. SNAS keeps blue and the
+    no-detection corner keeps vermilion, matching their colours elsewhere.
+    """
+    fac = json.load((ROOT / "results" / "p1_1_factorial_ablation.json").open())["experiments"]
 
     labels = ["Exp 1\n(grad. scaling)", "Exp 2\n(free rider)",
               "Exp 3\n(attack+strag.)", "Exp 4\n(honest strag.)"]
     keys = [k for _, _, k, _, _ in EXP]
-    snas_m = [snas[k]["mean_auroc"] for k in keys]
-    snas_s = [snas[k]["std_auroc"] for k in keys]
-    nod_m = [nod[k]["mean_auroc"] for k in keys]
-    nod_s = [nod[k]["std_auroc"] for k in keys]
+    arms = [
+        ("Neither",   "nodetect", OKABE["vermil"]),
+        ("Clip only", "cliponly", OKABE["orange"]),
+        ("Gate only", "gateonly", OKABE["sky"]),
+        ("Both (SNAS)", "snas",   OKABE["blue"]),
+    ]
 
     x = np.arange(len(labels))
-    w = 0.36
+    n = len(arms)
+    w = 0.80 / n
+
     fig, ax = plt.subplots(figsize=(7.0, 4.8))
-    b1 = ax.bar(x - w / 2, snas_m, w, yerr=snas_s, capsize=3, label="SNAS (gate on)",
-                color=OKABE["blue"], edgecolor="white", linewidth=0.5)
-    b2 = ax.bar(x + w / 2, nod_m, w, yerr=nod_s, capsize=3, label="No-detection (gate off)",
-                color=OKABE["vermil"], edgecolor="white", linewidth=0.5)
-    # horizontal value labels placed above the error-bar caps (no overlap)
-    for bars, means, stds in ((b1, snas_m, snas_s), (b2, nod_m, nod_s)):
+    for i, (name, arm, colour) in enumerate(arms):
+        means = [fac[k]["cells"][arm]["mean"] for k in keys]
+        stds = [fac[k]["cells"][arm]["std"] for k in keys]
+        offset = (i - (n - 1) / 2) * w
+        bars = ax.bar(x + offset, means, w * 0.9, yerr=stds, capsize=2, label=name,
+                      color=colour, edgecolor="white", linewidth=0.5)
+        # Rotated labels, as in fig_baseline_comparison: four bars per group are
+        # too narrow for horizontal text, and rotating keeps them clear of the
+        # error-bar caps.
         for bar, m, s in zip(bars, means, stds):
-            ax.text(bar.get_x() + bar.get_width() / 2, m + s + 0.007, f"{m:.3f}",
-                    ha="center", va="bottom", fontsize=7.5, color="#333")
+            ax.text(bar.get_x() + bar.get_width() / 2, m + s + 0.004, f"{m:.3f}",
+                    ha="center", va="bottom", fontsize=6, rotation=90, color="#333")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.set_ylabel("Mean AUROC (rounds 8--10)")
-    ax.set_ylim(0.77, 1.0)
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=2,
+    ax.set_ylim(0.77, 1.03)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=4,
               fontsize=9, **BOX)
     fig.tight_layout()
     _save(fig, "fig_ablation")

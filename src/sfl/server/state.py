@@ -107,6 +107,10 @@ class ServerState:
             alpha=float(self.config.get("snas_alpha", 0.5)),
             beta=float(self.config.get("snas_beta", 0.2)),
             gamma=float(self.config.get("snas_gamma", 0.3)),
+            # P1-5. Default "absolute" reproduces every published result; set
+            # "delta" to score the update theta_i - theta^g against the other
+            # clients' updates instead.
+            anomaly_basis=str(self.config.get("snas_anomaly_basis", "absolute")),
         )
         self.trust = TrustState(
             client_ids=client_ids,
@@ -200,7 +204,23 @@ class ServerState:
         Allows automated multi-seed and sensitivity sweeps without restarting
         the server process. Config overrides (e.g. aggregator_type, snas_gamma)
         are merged into the current config before reinitialisation.
+
+        Atomic in the config: if reinitialisation raises — an out-of-range
+        value, an unknown enum — the previous config is restored before the
+        error propagates. Without this, the bad override stays merged in and
+        *every subsequent reset re-raises*, so one malformed request bricks the
+        server for the rest of the grid rather than failing one run. Observed
+        for real with snas_anomaly_basis.
         """
+        previous_config = self.config
+        try:
+            self._reset_unchecked(config_overrides)
+        except Exception:
+            self.config = previous_config
+            raise
+
+    def _reset_unchecked(self, config_overrides: dict | None = None) -> None:
+        """Body of reset(). Call reset() instead — it restores config on error."""
         if config_overrides:
             self.config = {**self.config, **config_overrides}
 
@@ -243,6 +263,10 @@ class ServerState:
             alpha=float(self.config.get("snas_alpha", 0.0)),
             beta=float(self.config.get("snas_beta", 0.35)),
             gamma=float(self.config.get("snas_gamma", 0.65)),
+            # P1-5. Default "absolute" reproduces every published result; set
+            # "delta" to score the update theta_i - theta^g against the other
+            # clients' updates instead.
+            anomaly_basis=str(self.config.get("snas_anomaly_basis", "absolute")),
         )
         self.trust = TrustState(
             client_ids=client_ids,

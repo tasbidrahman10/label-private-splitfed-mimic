@@ -1,0 +1,26 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Paper Experiment E2 — Free rider attack on Client 2 (Cardiac).
+  Client 2 submits random weights of the same shape as its encoder every round.
+  No stale clients. Tests SNAS detection of a complete free rider whose weights
+  have near-zero cosine similarity with the global encoder.
+  Expected: Client 2 quarantined within 3-5 rounds (after warm-up).
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/gateonly/e2_free_rider
+
+fedavg_wait_seconds: 120.0
+
+delay_config:
+  0: 0
+  1: 5
+  2: 10
+
+attack_config:
+  2:
+    type: free_rider
+    params: {}

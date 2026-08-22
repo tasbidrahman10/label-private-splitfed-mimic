@@ -36,11 +36,11 @@
 \author[2]{\fnm{Hassin Arman} \sur{Nihal}}\email{hassinarman070@gmail.com}
 \author[3]{\fnm{Md. Sorup} \sur{Rohan}}\email{sorupr5@gmail.com}
 
-\affil*[1]{\orgdiv{Department of Computer Science and Engineering}, \orgname{North South University}, \orgaddress{\city{Dhaka}, \country{Bangladesh}}}
+\affil*[1]{\orgdiv{Department of Electrical and Computer Engineering}, \orgname{North South University}, \orgaddress{\city{Dhaka}, \country{Bangladesh}}}
 \affil[2]{\orgdiv{Department of Electrical and Electronic Engineering}, \orgname{Bangladesh University of Engineering and Technology}, \orgaddress{\city{Dhaka}, \country{Bangladesh}}}
 \affil[3]{\orgdiv{Department of Computer Science and Engineering}, \orgname{Khulna University of Engineering \& Technology}, \orgaddress{\city{Khulna}, \country{Bangladesh}}}
 
-\abstract{Split federated learning combines the label locality of split learning with the collaborative model aggregation of federated learning, making it attractive for privacy-sensitive critical-care prediction. However, existing SplitFed pipelines commonly assume synchronous aggregation and benign clients: the server waits for every client before aggregation and accepts each submitted encoder without adversarial verification. These assumptions are brittle in Internet of Medical Things (IoMT) deployments, where clients may be delayed by network or workload variation and compromised clients may submit poisoned encoder weights. We propose SENTINEL-SplitFed, a server-side extension for asynchronous split federated learning with intrusion resilience. The framework replaces blocking aggregation with timed asynchronous windows, tracks per-client staleness, and introduces a Staleness-Normalized Anomaly Score (SNAS) that combines cosine and norm-based encoder anomalies while discounting benign delay-induced staleness. Accepted, flagged, and quarantined client submissions are then handled by a robust asynchronous aggregation rule with norm clipping. On a three-client non-IID MIMIC-IV mortality prediction benchmark, SENTINEL-SplitFed preserves clean asynchronous performance relative to synchronous SplitFed, maintains AUROC under honest straggler dropout, and detects gradient-scaling and free-rider attacks with 100\% detection of post-warm-up attacker submissions (8/8; 80\% including the warm-up rounds, during which the gate is deliberately inactive) and 0\% observed false positives (0/16 honest client-rounds) in the evaluated settings. Across ten seeds, SNAS obtains AUROC $0.9613\pm0.0001$ under gradient scaling, $0.9595\pm0.0004$ under simultaneous attack and straggler, and $0.9094\pm0.0070$ under free-rider attack. Against robust-aggregation baselines, SNAS is significantly better than both trimmed mean and FLTrust on every attack setting, winning all ten of ten paired seeds in each case (Wilcoxon $p=0.00195$, the $n=10$ floor). Krum attains higher raw AUROC, but does so by collapsing federated participation to a single client in 300 of 300 aggregation rounds, a tie-break artifact of operating outside its own $N\geq2f+3$ validity condition rather than a robustness property. Adaptive adversary experiments further reveal a structural vulnerability of memoryless staleness normalization: an attack-then-abstain adversary can evade per-round SNAS gates. We discuss temporal accumulation as a mitigation direction. These results position SENTINEL-SplitFed as a split-learning-native resilience mechanism for asynchronous low-client critical-care federation, while explicitly characterizing its robustness boundary.}
+\abstract{Split federated learning combines the label locality of split learning with the collaborative model aggregation of federated learning, making it attractive for privacy-sensitive critical-care prediction. However, existing SplitFed pipelines commonly assume synchronous aggregation and benign clients: the server waits for every client before aggregation and accepts each submitted encoder without adversarial verification. These assumptions are brittle in Internet of Medical Things (IoMT) deployments, where clients may be delayed by network or workload variation and compromised clients may submit poisoned encoder weights. We propose SENTINEL-SplitFed, a server-side extension for asynchronous split federated learning with intrusion resilience. The framework replaces blocking aggregation with timed asynchronous windows, tracks per-client staleness, and introduces a Staleness-Normalized Anomaly Score (SNAS) that combines cosine and norm-based encoder anomalies while discounting benign delay-induced staleness. Accepted, flagged, and quarantined client submissions are then handled by a robust asynchronous aggregation rule with norm clipping. On a three-client non-IID MIMIC-IV mortality prediction benchmark, SENTINEL-SplitFed preserves clean predictive performance when no client is late, where the windowed rule reduces to synchronous SplitFed, maintains AUROC under honest straggler dropout, and detects gradient-scaling and free-rider attacks with 100\% detection of post-warm-up attacker submissions (8/8; 80\% including the warm-up rounds, during which the gate is deliberately inactive) and 0\% observed false positives (0/16 honest client-rounds) in the evaluated settings. Across ten seeds, SNAS obtains AUROC $0.9613\pm0.0001$ under gradient scaling, $0.9595\pm0.0004$ under simultaneous attack and straggler, and $0.9094\pm0.0070$ under free-rider attack. Against robust-aggregation baselines, SNAS is significantly better than both trimmed mean and FLTrust on every attack setting, winning all ten of ten paired seeds in each case (Wilcoxon $p=0.00195$, the $n=10$ floor). Krum attains higher raw AUROC, but does so by collapsing federated participation to a single client in 300 of 300 aggregation rounds, a tie-break artifact of operating outside its own $N\geq2f+3$ validity condition rather than a robustness property. Adaptive adversary experiments further reveal a structural vulnerability of memoryless staleness normalization: an attack-then-abstain adversary can evade per-round SNAS gates. We discuss temporal accumulation as a mitigation direction. These results position SENTINEL-SplitFed as a split-learning-native resilience mechanism for asynchronous low-client critical-care federation, while explicitly characterizing its robustness boundary.}
 
 \keywords{split federated learning, asynchronous federated learning, Byzantine robustness, intrusion detection, critical-care machine learning, MIMIC-IV, IoMT}
 
@@ -191,7 +191,7 @@ The detector uses a one-round warm-up period to establish a reference global enc
         \mathrm{quarantine}, & \mathrm{SNAS}_i > \delta_{\mathrm{quarantine}}.
     \end{cases}
 \end{equation}
-The default thresholds are $\delta_{\mathrm{flag}}=0.22$ and $\delta_{\mathrm{quarantine}}=0.35$. Flagged clients are included with an aggregation penalty, while quarantined clients are excluded for that round.
+The default thresholds are $\delta_{\mathrm{flag}}=0.22$ and $\delta_{\mathrm{quarantine}}=0.35$. Flagged clients are included with an aggregation penalty, while quarantined clients are excluded for that round. These values were fixed on a calibration set consisting of the clean runs and the gradient-scaling attack only; every detection and false-positive rate reported in Section~\ref{sec:results} for the remaining attacks is measured on data that had no influence on them. Section~\ref{sec:calibration} states the procedure and the held-out result.
 \begin{table}[t]
 \caption{Positioning SENTINEL-SplitFed against representative FL and SplitFed robustness methods.}
 \label{tab:sota-positioning}
@@ -341,34 +341,47 @@ The main SNAS attack experiments are repeated across ten seeds: 42, 7, 123, 2024
 
 \subsection{Main predictive and security results}
 
-Table~\ref{tab:main-results} summarizes the primary SNAS results. To ensure that the reported degradations are measured against a comparably-estimated reference, the clean asynchronous baseline is itself evaluated across the same ten seeds, giving $0.9651\pm0.0001$ AUROC; this matches the synchronous SplitFed baseline to within noise. Gradient scaling and attack-plus-straggler experiments retain AUROC within approximately 0.5--0.7 percentage points of this baseline while detecting the attacker in all evaluated detection rounds. The free-rider attack is more destructive because random encoder weights corrupt the warm-up round, but quarantine after warm-up enables partial recovery. The honest-straggler setting causes no degradation relative to the clean baseline.
+Table~\ref{tab:main-results} summarizes the primary SNAS results. To ensure that the reported degradations are measured against a comparably-estimated reference, the clean baseline is itself evaluated across the same ten seeds, giving $0.9651\pm0.0001$ AUROC. This baseline also serves as the synchronous reference. In the clean configuration every client submits within the aggregation window (delays of $0$, $5$ and $10$~s against a $25$~s window), so no submission is ever late and the windowed rule reduces exactly to synchronous FedAvg over all three encoders: asynchrony is available but never exercised. Reporting a separate synchronous row would therefore restate the same measurement, and we quote the ten-seed value rather than a single-seed one. Gradient scaling and attack-plus-straggler experiments retain AUROC within approximately 0.5--0.7 percentage points of this baseline while detecting the attacker in all evaluated detection rounds. The free-rider attack is more destructive because random encoder weights corrupt the warm-up round, but quarantine after warm-up enables partial recovery. The honest-straggler setting causes no degradation relative to the clean baseline.
 
 \begin{table}[t]
-\caption{Primary SENTINEL-SplitFed results. AUROC is averaged over rounds 8--10; the clean baseline and all four experiments report ten-seed mean and standard deviation. Detection (DR) and false positive (FPR) rates are observed under the evaluated experiments. DR is reported over post-warm-up attacker submissions (8/8 detection rounds; first detection in round 2, immediately after warm-up), which is $80\%$ of all $10$ attacker submissions including the two warm-up rounds during which the gate is deliberately inactive. FPR is $0/16$ observed honest client-rounds.}
+\caption{Primary SENTINEL-SplitFed results. AUROC and AUPRC are averaged over rounds 8--10 and across the three clients; the clean baseline and all four experiments report ten-seed mean and standard deviation. AUPRC is reported alongside AUROC because client prevalence spans $6.9\%$--$16.1\%$ (Section~\ref{sec:setup}), a regime in which AUROC is comparatively insensitive to the errors an attack induces. Detection (DR) and false positive (FPR) rates are observed under the evaluated experiments. DR is reported over post-warm-up attacker submissions (8/8 detection rounds; first detection in round 2, immediately after warm-up), which is $80\%$ of all $10$ attacker submissions including the two warm-up rounds during which the gate is deliberately inactive. FPR is $0/16$ observed honest client-rounds.}
 \label{tab:main-results}
 \centering
-\begin{tabular}{llllll}
+\begin{tabular}{lllllll}
 \toprule
-Experiment & Attack & Straggler & AUROC & DR & FPR \\
+Experiment & Attack & Straggler & AUROC & AUPRC & DR & FPR \\
 \midrule
-Sync-FedAvg baseline & None & None & 0.9649 (1 seed) & -- & -- \\
-Async clean (n=10) & None & Mild lag & $0.9651\pm0.0001$ & -- & -- \\
-Exp~1 gradient scaling & Client 1, $10\times$ & None & $0.9613\pm0.0001$ & 100\% & 0\% \\
-Exp~2 free rider & Client 2, random & None & $0.9094\pm0.0070$ & 100\% & 0\% \\
-Exp~3 attack + straggler & Client 1, $10\times$ & Client 2 & $0.9595\pm0.0004$ & 100\% & 0\% \\
-Exp~4 honest straggler & None & Client 2 & $0.9659\pm0.0002$ & -- & 0\% \\
+Clean baseline (n=10) & None & Mild lag & $0.9651\pm0.0001$ & $0.8475\pm0.0004$ & -- & -- \\
+Exp~1 gradient scaling & Client 1, $10\times$ & None & $0.9613\pm0.0001$ & $0.8357\pm0.0006$ & 100\% & 0\% \\
+Exp~2 free rider & Client 2, random & None & $0.9094\pm0.0070$ & $0.6723\pm0.0253$ & 100\% & 0\% \\
+Exp~3 attack + straggler & Client 1, $10\times$ & Client 2 & $0.9595\pm0.0004$ & $0.8298\pm0.0014$ & 100\% & 0\% \\
+Exp~4 honest straggler & None & Client 2 & $0.9659\pm0.0002$ & $0.8477\pm0.0004$ & -- & 0\% \\
+Exp~5 label flip & Client 1, $\sigma{=}0.3$ noise & None & $0.9502\pm0.0015$ & $0.7929\pm0.0044$ & 100\% & 0\% \\
+Exp~6 backdoor & Client 1, $10\%$ weights $+5$ & None & $\mathbf{0.7008}\pm0.0061$ & $\mathbf{0.2459}\pm0.0082$ & 100\% & 0\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The ten-seed results address sensitivity to random initialization and minibatch order. The clean baseline and Exp~1, Exp~3, and Exp~4 are all highly stable, each with standard deviation between 0.0001 and 0.0004, so the reported degradations (roughly $-0.004$ to $-0.056$ AUROC) are two orders of magnitude larger than seed variability. Exp~2 has larger variance ($0.0070$), consistent with the random-weight free-rider mechanism. Exp~4 (honest straggler) matches the clean baseline: its mean is marginally higher ($0.9659$ versus $0.9651$, a $+0.0008$ paired difference that is consistent across all ten seeds but small in magnitude, most plausibly reflecting the exclusion of the lowest-prevalence Cardiac partition). We therefore claim only that honest straggling causes \emph{no degradation}, not that it improves over the baseline.
 
+\paragraph{AUPRC.} Because mortality prevalence spans $6.9\%$--$16.1\%$ across the three clients, AUROC is not by itself an adequate summary: it is dominated by the ranking of the large negative class and is comparatively insensitive to errors concentrated in the positive class, which is precisely where a poisoning attack does its damage. Table~\ref{tab:main-results} therefore reports AUPRC alongside it, computed on the same runs and the same rounds. The two metrics agree on ordering but not on magnitude, and the discrepancy is consistent: relative to the clean baseline, Exp~1 loses $0.0038$ AUROC but $0.0118$ AUPRC, Exp~3 loses $0.0056$ against $0.0177$, and Exp~2 loses $0.0557$ against $0.1752$. In every case the AUPRC degradation is close to three times the AUROC degradation, so reporting AUROC alone understates the harm an attack causes --- and, symmetrically, understates what the detector recovers. We regard the AUPRC column as the more faithful measure of clinical consequence in this prevalence regime, and the AUROC column as the one comparable to prior SplitFed work.
+
+Per-client AUPRC does not simply track prevalence. On the clean baseline the Surgical partition attains the highest value ($0.864$ at $11.5\%$ prevalence), ahead of Medical ($0.832$ at $16.1\%$) and Cardiac ($0.847$ at $6.9\%$). Prevalence therefore does not determine separability here, and the aggregate is not carried by any single partition; per-client values for every cell are reported in the supplementary material.
+
+\paragraph{Two further attack types, and the limit of a single quarantine threshold.} Exp~5 and Exp~6 exercise the two attacks that perturb the \emph{direction} of the submitted encoder rather than its magnitude: a label-flip proxy adding structured Gaussian noise, and a backdoor perturbing a random $10\%$ of weights by $+5$. Both are detected in $100\%$ of post-warm-up attacker rounds with no false positives, so the gate sees them as reliably as it sees gradient scaling.
+
+What separates them is what happens next. Their mean SNAS scores are $0.280$ and $0.302$, which clear the flag threshold $\delta_{\mathrm{flag}}=0.22$ but fall below $\delta_{\mathrm{quarantine}}=0.35$; the attacker is consequently quarantined in $0\%$ and $7.5\%$ of rounds respectively, against $71.2\%$ for gradient scaling and $100\%$ for the free rider. Being flagged carries only an aggregation penalty, so the poisoned update keeps entering the aggregate at reduced weight. \textbf{The backdoor is in consequence the most damaging attack evaluated in this study} --- $0.7008$ AUROC and, strikingly, $0.2459$ AUPRC against a clean baseline of $0.8475$ --- despite being detected in every round.
+
+The cause is not a mis-chosen threshold but a property of the score. Norm-driven attacks (gradient scaling, free rider) produce mean SNAS in the range $0.358$--$0.421$; direction-driven attacks (label flip, backdoor) produce $0.280$--$0.302$. A single global $\delta_{\mathrm{quarantine}}$ must fall on one side or the other, and no recalibration separates two families whose score distributions do not separate (Section~\ref{sec:calibration}). Making $\gamma$ and $\beta$ contributions commensurable, or thresholding the two components independently, is the appropriate remedy; we identify it as future work rather than claiming the current gate handles all four attacks equally.
+
+This result also sharpens the AUPRC argument above. On the backdoor, AUROC falls by $0.264$ from the clean baseline while AUPRC falls by $0.602$ --- more than twice as far. An evaluation reporting AUROC alone would describe a serious attack as a moderate one.
+
 Figure~\ref{fig:perround} shows the per-round dynamics behind these summary numbers. Under gradient scaling (Exp~1) and simultaneous attack-plus-straggler (Exp~3), the global encoder dips in the warm-up round and then recovers to track the baseline once the attacker is quarantined. The free-rider attack (Exp~2) causes a much larger warm-up crash because random encoder weights corrupt the first aggregation before the gate is calibrated, followed by steady recovery after quarantine. The honest-straggler run (Exp~4) tracks the baseline throughout, confirming that staleness normalization prevents false quarantine of the delayed client.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_perround_auroc.pdf}
-\caption{Per-round mean AUROC across the three client validation partitions (seed 42). The dashed line is the synchronous SplitFed baseline (0.9649). Exp~1/Exp~3 dip during warm-up and recover; Exp~2 shows the free-rider warm-up crash and subsequent recovery; Exp~4 tracks the baseline without false quarantine.}
+\caption{Per-round mean AUROC across the three client validation partitions (seed 42). The dashed line is the ten-seed clean baseline (0.9651), which is also the synchronous reference since every client submits within the window in that configuration. Exp~1/Exp~3 dip during warm-up and recover; Exp~2 shows the free-rider warm-up crash and subsequent recovery; Exp~4 tracks the baseline without false quarantine.}
 \label{fig:perround}
 \end{figure}
 
@@ -376,7 +389,13 @@ Figure~\ref{fig:perround} shows the per-round dynamics behind these summary numb
 
 Table~\ref{tab:baselines} compares SNAS against Krum, trimmed mean, and FLTrust. Krum obtains the highest raw AUROC in all three attack settings. However, server logs reveal that Krum selects Client 0 in \emph{every} aggregation round it performed: 300 of 300 selection decisions across Exp~1, Exp~2 and Exp~3 at ten seeds each, with zero exceptions. Beyond the raw win count, this outcome is itself a tie-break artifact rather than a genuine security property: at $N=3$, $f=1$, Krum's own validity condition $N\geq2f+3$ requires $N\geq5$, so this configuration sits outside its guarantee. With $k=\max(1,N-2)=1$, the two honest clients' scores are each the distance to the \emph{other} honest client — the same value for both, tied bit-for-bit — and Python's \texttt{min()} resolves the tie by insertion order, which favors whichever client submitted first (Client 0, at delay $0$s). Had submission order been adversarial, Krum would have selected the attacker instead. The Krum result is therefore not a federated aggregate; it is a repeated re-selection of one Medical ICU client, decided by submission order rather than by robustness. This can be beneficial for AUROC if that partition is sufficient for the task, but it discards the Surgical and Cardiac clients and defeats the purpose of collaborative federation.
 
-Trimmed mean degenerates to vanilla FedAvg at $N=3$ with trim ratio 0.2 because $\lfloor 0.2\times3\rfloor=0$ coordinates are trimmed; it is therefore reported as a nominal rather than an effective robust baseline at this client count.
+Trimmed mean degenerates to vanilla FedAvg at $N=3$ with trim ratio 0.2 because $\lfloor 0.2\times3\rfloor=0$ coordinates are trimmed; it is therefore reported as a nominal rather than an effective robust baseline at this client count. The coordinate-wise median is the estimator that does not degenerate here: at $N=3$ it returns the middle value of every coordinate, so a single Byzantine client cannot move any coordinate past its honest neighbours regardless of perturbation size. We include it as the robust baseline trimmed mean was intended to be.
+
+\paragraph{The median is a strong baseline, and beats SNAS under full participation.} This must be stated plainly rather than softened. On the two attacks in which all three clients submit within the window, the coordinate-wise median outperforms SNAS on both metrics and on every paired seed: $+0.0031$ AUROC on gradient scaling and $+0.0554$ on the free rider, each winning $10$ of $10$ seeds at the $n=10$ Wilcoxon floor ($p=0.00195$, paired $d=-13.3$ and $-8.1$). On the free rider it returns $0.9647$, statistically indistinguishable from the clean baseline --- the attack is neutralised outright. Any claim that SNAS dominates the robust-aggregation baselines at $N=3$ under full participation is not supported by these data.
+
+\paragraph{But its guarantee is a function of who arrives.} The ordering reverses on Exp~3, the only setting in which a client straggles: there SNAS leads the median by $+0.0037$ AUROC, again $10$ of $10$ paired seeds ($p=0.00195$, $d=+6.7$), and the median is the weakest of all five aggregators. The mechanism is measurable rather than inferred. Client 2's $30$~s delay exceeds the $25$~s submission window, so it misses seven of ten rounds, and the server's own aggregation records show only two clients aggregated in those rounds. At $n=2$ the coordinate-wise median of two submissions \emph{is} their mean: the breakdown point $\lfloor (n-1)/2 \rfloor$ falls to zero and the $10\times$ attacker recovers its full $50\%$ influence. Across all thirty median runs, $90$ of $300$ rounds ($30.0\%$) aggregated only two clients and therefore carried no Byzantine tolerance at all.
+
+This is the distinction the paper is actually about. Robust aggregation rules earn their guarantee from a quorum of honest submissions, so their breakdown point depends on how many clients \emph{arrive}; that is a synchronous-federation property. SNAS's staleness weighting and per-submission gating do not depend on the arrival count, and it is the only aggregator evaluated here that does not degrade when a client straggles. The claim we defend is therefore not that SNAS is the strongest robust aggregator, but that \textbf{quorum-dependent robustness degrades under asynchrony while per-submission detection does not}. It also yields a falsifiable prediction: at larger $N$ a single dropout no longer forces $n=2$, so the median's advantage should return and the Exp~3 gap should narrow.
 
 FLTrust, by contrast, is a functioning baseline in this setting. The server computes a reference gradient by running its root split through the previous round's global encoder and the server head, then weights each client's \emph{update} $\Delta_i = \theta_i - \theta^g$ by $\mathrm{ReLU}(\cos(\Delta_i, g_{\mathrm{root}}))$. Two implementation details matter for reproducibility. First, the reference must be taken from the previous round's encoder, because the current global encoder is deliberately cleared while the submission window is open. Second, trust must be computed over updates rather than absolute weights: cosine similarity between full weight vectors is dominated by the shared base model, which leaves honest and adversarial submissions indistinguishable. With both handled, FLTrust produces three distinct, low-variance, attack-responsive results (Table~\ref{tab:baselines}) rather than collapsing onto the trimmed-mean values.
 
@@ -390,17 +409,19 @@ Figure~\ref{fig:baselines} visualizes these comparisons. The free-rider setting 
 \end{figure}
 
 \begin{table}[t]
-\caption{Baseline comparison. SNAS and Krum AUROC values are ten-seed means; trimmed mean and FLTrust are single representative runs. Krum reaches higher raw AUROC but collapses federation by repeatedly selecting one client. Trimmed mean and FLTrust degenerate under the evaluated low-client split-learning setting.}
+\caption{Baseline comparison. \textbf{All values are ten-seed means}, reported as AUROC~/~AUPRC per cell. Krum reaches higher raw AUROC but collapses federation by repeatedly selecting one client. The AUPRC column is the more discriminating one: on the free-rider attack (Exp~2) SNAS leads trimmed mean by $+0.085$ AUROC but by $+0.248$ AUPRC, and FLTrust by $+0.033$ AUROC but $+0.118$ AUPRC, so AUROC materially understates the separation between the aggregators at this prevalence.}
 \label{tab:baselines}
 \centering
 \begin{tabularx}{\textwidth}{@{}lccc>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
 \toprule
-Aggregator & Exp~1 AUROC & Exp~2 AUROC & Exp~3 AUROC & Split-learning compatible? & Federation preserved? \\
+Aggregator & Exp~1 & Exp~2 & Exp~3 & Split-learning compatible? & Federation preserved? \\
+ & \multicolumn{3}{c}{AUROC~/~AUPRC} & & \\
 \midrule
-SNAS & $\mathbf{0.9613}$ & $\mathbf{0.9094}$ & $\mathbf{0.9595}$ & Yes & Yes \\
-Krum & 0.9646 & 0.9647 & 0.9646 & Partially & No ($H=0$) \\
-Trimmed mean & 0.9569 & 0.8242 & 0.9560 & Yes & Nominally \\
-FLTrust & 0.9593 & 0.8762 & 0.9583 & Yes & Nominally \\
+SNAS & 0.9613~/~0.8357 & 0.9094~/~0.6723 & $\mathbf{0.9595}$~/~$\mathbf{0.8298}$ & Yes & Yes \\
+Krum & 0.9646~/~0.8423 & 0.9647~/~0.8425 & 0.9646~/~0.8423 & Partially & No ($H=0$) \\
+Coordinate median & $\mathbf{0.9644}$~/~$\mathbf{0.8457}$ & $\mathbf{0.9647}$~/~$\mathbf{0.8437}$ & 0.9559~/~0.8219 & Yes & Yes \\
+Trimmed mean & 0.9569~/~0.8247 & 0.8242~/~0.4248 & 0.9560~/~0.8220 & Yes & Nominally \\
+FLTrust & 0.9593~/~0.8290 & 0.8762~/~0.5548 & 0.9583~/~0.8261 & Yes & Nominally \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -438,22 +459,30 @@ Krum, Exp~1/2/3            & 1.00 & 0.00 & 0.00 & 0.000 \\
 The Byzantine-robust baselines above test the detection half of the design. To isolate what the anomaly gate itself contributes, we ablate it: disabling the SNAS gate and the norm-clipping step (setting both anomaly thresholds and the clip ratio to a value that never triggers) reduces the pipeline to a pure staleness-weighted asynchronous FedAvg with no anomaly detection. This ``no-detection'' condition is simultaneously the empirical asynchronous baseline a reader would expect --- staleness-weighted aggregation without a security mechanism --- and the ablation that quantifies the gate's benefit. We run it on all four experiments across the same ten seeds; Table~\ref{tab:ablation} reports the comparison, and Figure~\ref{fig:ablation} visualizes it.
 
 \begin{table}[t]
-\caption{Gate ablation. ``No-detection'' is SENTINEL-SplitFed with the anomaly gate and norm clipping disabled (pure staleness-weighted async FedAvg). Gate benefit is the paired AUROC gain from re-enabling the gate; $p$ is a paired $t$-test over ten seeds, pairing runs by seed. The gain is positive on all ten seeds in each of the three attack settings, and on five of ten (i.e.\ at chance) on the attack-free honest-straggler setting.}
+\caption{Factorial ablation of the two defences, ten seeds per cell, all contrasts paired by seed. The four arms differ only in whether the anomaly gate and the norm clip are active; the configurations are otherwise identical, so seed $s$ shares its initialization and minibatch order across all four. ``Gate'' and ``clip'' are main effects, each averaged over the two levels of the other factor; ``inter.'' is the interaction $(\text{both}-\text{gate only})-(\text{clip only}-\text{neither})$, where a negative value means the two defences overlap. Every contrast on Exp~1--3 is unanimous over ten seeds at the $n=10$ Wilcoxon floor ($p=0.00195$), with paired Cohen's $d$ from $2.4$ to $14.5$.}
 \label{tab:ablation}
 \centering
-\begin{tabular}{lcccc}
+\begin{tabular}{lcccccc}
 \toprule
-Experiment & SNAS (gate on) & No-detection & Gate benefit & Paired $p$ \\
+Experiment & Neither & Clip only & Gate only & Both & Gate & Clip \\
 \midrule
-Exp~1 gradient scaling & $0.9613\pm0.0001$ & $0.9578\pm0.0002$ & $+0.0035$ & $6\times10^{-12}$ \\
-Exp~2 free rider & $0.9094\pm0.0070$ & $0.8141\pm0.0137$ & $+0.0953$ & $2\times10^{-8}$ \\
-Exp~3 attack + straggler & $0.9595\pm0.0004$ & $0.9567\pm0.0003$ & $+0.0028$ & $3\times10^{-8}$ \\
-Exp~4 honest straggler & $0.9659\pm0.0002$ & $0.9658\pm0.0004$ & $+0.0001$ & $0.25$ \\
+Exp~1 gradient scaling & 0.9578 & 0.9596 & 0.9585 & $\mathbf{0.9613}$ & $+0.0012$ & $+0.0023$ \\
+Exp~2 free rider & 0.8141 & 0.8585 & 0.9002 & $\mathbf{0.9094}$ & $+0.0685$ & $+0.0268$ \\
+Exp~3 attack + straggler & 0.9567 & 0.9579 & 0.9570 & $\mathbf{0.9595}$ & $+0.0009$ & $+0.0019$ \\
+Exp~4 honest straggler & 0.9658 & 0.9658 & 0.9658 & 0.9659 & $+0.0001$ & $+0.0000$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Three observations follow. First, the gate provides a large and highly significant benefit under the free-rider attack ($+0.0953$ AUROC, ten of ten seeds), where unclipped random weights would otherwise corrupt the aggregate; the no-detection value ($0.8141$) sits close to the degenerate trimmed-mean result ($0.8242$), consistent with the pipeline reducing to vanilla FedAvg that absorbs the poison once detection is removed. Second, the benefit under gradient scaling and attack-plus-straggler is smaller ($+0.0035$ and $+0.0028$), because a uniformly scaled but directionally-honest update is partly diluted by staleness-weighted aggregation even without detection; the gate still improves on all ten seeds in both settings. Third, and importantly, the gate imposes \emph{no cost} when there is no attacker: on the honest-straggler experiment the gated and ungated results are statistically indistinguishable ($0.9659$ versus $0.9658$, $p=0.25$, and the gated run is higher on only five of ten seeds --- exactly chance), so the detection mechanism does not sacrifice clean-case utility. Together with the entropy result, this shows that SNAS is the only evaluated configuration that both keeps every honest client in the aggregate \emph{and} resists poisoning: Krum resists poisoning only by collapsing to a single client, while no-detection weights all clients but cannot exclude the attacker and so retains the poison.
+Four observations follow, three of which a two-corner ablation could not have produced.
+
+First, the pipeline benefit is large and highly significant under the free-rider attack ($+0.0953$ AUROC from neither to both, ten of ten seeds), where unclipped random weights would otherwise corrupt the aggregate; the no-detection value ($0.8141$) sits close to the degenerate trimmed-mean result ($0.8242$), consistent with the pipeline reducing to vanilla FedAvg that absorbs the poison once detection is removed. Under gradient scaling and attack-plus-straggler the benefit is smaller ($+0.0035$ and $+0.0028$), because a uniformly scaled but directionally-honest update is partly diluted by staleness-weighted aggregation even without detection.
+
+Second, \emph{which} defence carries that benefit depends on the attack, and the ordering reverses between them. Against the free rider the gate is worth roughly $2.5$ times the clip ($+0.0685$ against $+0.0268$); against gradient scaling and attack-plus-straggler the clip contributes more than the gate ($+0.0023$ against $+0.0012$, and $+0.0019$ against $+0.0009$). This is mechanically what one would expect --- a norm clip is precisely the right instrument against a $10\times$ scaled submission, while random weights are a direction anomaly no clip can repair --- but it is invisible unless the two factors are varied independently, and it means neither component is redundant.
+
+Third, on the free rider the two defences are strongly \emph{sub-additive}: individually they are worth $+0.0861$ and $+0.0444$, but together only $+0.0953$, an interaction of $-0.0353$. They overlap, each recovering damage the other would also have caught. We report this rather than allow the two benefits to appear additive. On Exp~1 and Exp~3 the interaction is small and positive ($+0.0011$ and $+0.0013$), i.e.\ mildly complementary.
+
+Fourth, neither defence costs anything when there is no attacker. On the honest-straggler experiment every contrast is at chance: win rates between four and six of ten seeds, $p$ between $0.23$ and $0.63$, and $|d|\leq0.45$. This is a proper null result, and it is the strongest available answer to the question of whether the gate induces false quarantines on benign stragglers. Together with the entropy result, it shows that SNAS is the only evaluated configuration that both keeps every honest client in the aggregate \emph{and} resists poisoning: Krum resists poisoning only by collapsing to a single client, while no-detection weights all clients but cannot exclude the attacker and so retains the poison.
 
 \begin{figure}[t]
 \centering
@@ -468,29 +497,47 @@ Table~\ref{tab:adaptive} summarizes three adaptive attacks. A threshold-aware at
 
 A strategic alternation attacker, however, exposes a structural vulnerability. By attacking, then abstaining, then attacking again, the adversary ensures $\tau=1$ for each malicious submission. The $(1+\tau)$ denominator reduces the score enough to avoid the gate across all four staleness decay functions. This is a limitation of memoryless per-round scoring rather than a decay-function choice. The observed AUROC damage is modest in the evaluated setting, but the evasion itself is important.
 
-Slow-ramp mimicry is partially detected: the client is first flagged at round 8, never quarantined by round 15, and AUROC degradation remains small. This suggests that flagging and weight penalties can bound damage for gradual attacks, but hard quarantine may require temporal accumulation.
+The mechanism is visible in the scores rather than only in the outcome. The alternating attacker's mean SNAS is $0.175$--$0.177$ across the four decay functions, against a flag threshold of $0.22$: the halving induced by $\tau=1$ parks the score just below the gate, consistently and by a similar margin in every setting. The contrast with the threshold-aware attacker, whose mean score is $0.347$ and which is caught in every post-warm-up round, is what identifies the denominator rather than the decay function as the cause. The evasion is therefore systematic, not a marginal or noise-driven miss.
+
+Slow-ramp mimicry is partially detected: the client is first flagged at round 10, detected in $38.5\%$ of post-warm-up rounds, never quarantined by round 15, and AUROC degradation remains small ($-0.0009$). This suggests that flagging and weight penalties can bound damage for gradual attacks, but hard quarantine may require temporal accumulation.
 
 \begin{table}[t]
-\caption{Adaptive adversary results. Attack B reveals a robustness boundary of memoryless staleness-normalized scoring.}
+\caption{Adaptive adversary results, single seed. Detection is over post-warm-up attacker submissions; AUROC $\Delta$ is measured against the ten-seed clean asynchronous baseline of $0.9651$ (Table~\ref{tab:main-results}). ``Mean SNAS'' is the attacker's mean score over the same rounds, against $\delta_{\mathrm{flag}}=0.22$ and $\delta_{\mathrm{quarantine}}=0.35$; it shows directly why the alternating attacker evades, its score sitting just below the flag threshold in every decay setting. The alternation attack reveals a robustness boundary of memoryless staleness-normalized scoring.}
 \label{tab:adaptive}
 \centering
-\begin{tabularx}{\textwidth}{@{}lccc>{\raggedright\arraybackslash}X@{}}
+\begin{tabularx}{\textwidth}{@{}lcccc>{\raggedright\arraybackslash}X@{}}
 \toprule
-Attack & Detection & First detection & AUROC $\Delta$ & Interpretation \\
+Attack & Detection & First detection & Mean SNAS & AUROC $\Delta$ & Interpretation \\
 \midrule
-Threshold-aware scaling & 100\% & Round 2 & $-0.0054$ & Formula-aware scaling fails due to training drift \\
-Alternating, exponential & 0\% & Never & $-0.0057$ & Structural evasion \\
-Alternating, linear & 0\% & Never & $-0.0056$ & Structural evasion \\
-Alternating, polynomial & 0\% & Never & $-0.0056$ & Structural evasion \\
-Alternating, step & 0\% & Never & $-0.0060$ & Worst damage among decay functions \\
-Slow ramp, 15 rounds & Flagged & Round 8 & $-0.0013$ & Partial detection bounds damage \\
+Threshold-aware scaling & 100\% & Round 2 & 0.347 & $-0.0040$ & Formula-aware scaling fails due to training drift \\
+Alternating, exponential & 0\% & Never & 0.177 & $-0.0038$ & Structural evasion \\
+Alternating, linear & 0\% & Never & 0.175 & $-0.0037$ & Structural evasion \\
+Alternating, polynomial & 0\% & Never & 0.175 & $-0.0037$ & Structural evasion \\
+Alternating, step & 0\% & Never & 0.175 & $-0.0040$ & Worst damage among decay functions \\
+Slow ramp, 15 rounds & 38.5\% & Round 10 & 0.221 & $-0.0009$ & Partial detection bounds damage \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+\subsection{Threshold calibration and held-out evaluation}\label{sec:calibration}
+
+A detection threshold chosen by scanning for good detection and false-positive rates, and then evaluated by reporting those same rates, is calibrated on its own test set. To remove that circularity we fix $(\delta_{\mathrm{flag}}, \delta_{\mathrm{quarantine}})$ on a declared calibration set and evaluate on data that had no part in choosing them.
+
+The calibration set is the clean runs together with the gradient-scaling attack (Exp~1) --- the setting the thresholds were originally tuned against --- across all ten seeds, giving 403 honest and 80 attacker client-rounds. Two mechanical rules are fixed in advance: $\delta_{\mathrm{flag}}$ is the highest honest SNAS observed in calibration plus a $5\%$ margin, the smallest threshold raising no false positive on calibration data; $\delta_{\mathrm{quarantine}}$ is the $25$th percentile of calibration attacker scores, rather than the minimum, which would fit the single lowest-scoring round. Applied to the calibration set these rules give $\delta_{\mathrm{flag}}=0.164$ and $\delta_{\mathrm{quarantine}}=0.346$.
+
+Held out are the free-rider attack, the attack-plus-straggler setting, the label-flip attack and the backdoor attack, none of which contributed to the thresholds. On all four, detection is $100\%$ of post-warm-up attacker rounds, and the false-positive rate is $0\%$ on three of the four; the exception is the attack-plus-straggler setting, at $7.5\%$. Every attack is separable from honest behaviour by a margin of $0.09$--$0.28$ in SNAS. Repeating the exercise with a seed-disjoint split --- calibrating on five seeds and evaluating on the other five across all cells --- also gives $100\%$ detection at $0\%$ false positives, so the thresholds are not fitted to particular runs either.
+
+Two conclusions follow, and the second is a limitation rather than a result. First, a \emph{single} flag threshold suffices for every attack studied: across all experiments the highest honest score is $0.195$ and the lowest attacker score is $0.233$, so any $\delta_{\mathrm{flag}}\in(0.195, 0.233)$ achieves $100\%$ detection at $0\%$ false positives on all of them simultaneously. The deployed value $0.22$ lies inside that window. It is also, notably, a better choice than the value the calibration rule produces: at $0.164$ the rule is too aggressive and induces the $7.5\%$ false-positive rate noted above, because honest scores in the straggler setting reach $0.195$. We therefore retain $0.22$ and report the derived value for transparency rather than adopting it. The window is only $0.038$ wide, which we state plainly: the choice is well founded but not generous, and a fifth attack family could narrow or close it.
+
+Second, no single \emph{quarantine} threshold serves every attack. The derived $0.346$ independently reproduces the deployed $0.35$, so that value is not arbitrary --- but as Section~\ref{sec:results} reports, direction-driven attacks score $0.28$--$0.30$ while norm-driven attacks score $0.36$--$0.42$, and $\delta_{\mathrm{quarantine}}$ falls between them. The consequence is that label-flip and backdoor submissions are flagged in every round yet quarantined in almost none. This is a property of the score, not of the calibration: recalibrating cannot separate two attack families whose score distributions do not separate. A per-signal threshold, or a score normalised so that direction and magnitude anomalies are commensurable, is the appropriate remedy and we identify it as future work.
+
 \subsection{Hyperparameter sensitivity}
 
-Table~\ref{tab:sensitivity} summarizes the sensitivity analysis. Detection is stable for $\beta\in[0.10,0.70]$ when $\gamma=1-\beta$, corresponding to 77.8\% of the tested range. Detection degrades only when $\beta\geq0.80$, where the norm-anomaly component is too heavily downweighted. Threshold sweeps over 115 valid $(\delta_{\mathrm{flag}},\delta_{\mathrm{quarantine}})$ combinations show that 71 combinations, or 61.7\%, achieve 100\% detection with 0\% false positives on the hardest evaluated Exp~3 setting. Clip ratio sensitivity from 1.5 to 4.0 shows identical 100\% DR and 0\% FPR across all tested values. Figure~\ref{fig:heatmap} shows the threshold sweep as two panels: detection rate (uniformly $100\%$ across the valid region) and false-positive rate (the quantity that actually varies). The zero-FPR region is a broad plateau rather than a knife-edge, and the default operating point sits comfortably inside it.
+Table~\ref{tab:sensitivity} summarizes the sensitivity analysis, over 139 single-seed grid points. Detection on the gradient-scaling setting is stable for $\beta\in[0.10,0.70]$ when $\gamma=1-\beta$, corresponding to 77.8\% of the tested range. Detection degrades only when $\beta\geq0.80$, where the norm-anomaly component is too heavily downweighted --- falling to 71.4\% at $\beta=0.80$ and 42.9\% at $\beta=0.90$. Threshold sweeps over 115 valid $(\delta_{\mathrm{flag}},\delta_{\mathrm{quarantine}})$ combinations show that 71 combinations, or 61.7\%, achieve 100\% detection with 0\% false positives on the hardest evaluated Exp~3 setting. Clip ratio sensitivity from 1.5 to 4.0 shows identical 100\% DR and 0\% FPR across all tested values.
+
+The $\beta$ constraint is imposed by one attack family and not the other, which is what makes the safe range interpretable rather than merely empirical. Sweeping $\beta$ on the free-rider attack gives $100\%$ detection at \emph{every} tested value, $0.10$ through $0.90$, with no false positives; sweeping it on gradient scaling gives $100\%$ only up to $0.70$. The asymmetry follows from the attacks' signatures. A free rider submits random weights, which are anomalous in direction and magnitude simultaneously, so either term alone suffices and the split between them is immaterial. Gradient scaling is a pure magnitude attack that the cosine term cannot see at all, so it depends entirely on $\gamma=1-\beta$ remaining large enough; once $\beta\geq0.80$ the norm term is too heavily downweighted and detection falls, reaching $42.9\%$ at $\beta=0.90$, where the sweep also records its only false positives ($7.7\%$). The upper bound of the safe range is therefore set by the norm-driven attack, and $\beta=0.35$ sits comfortably inside the region where both families are detected.
+
+This sweep was regenerated on the 265-feature data after the removal of \texttt{los}, so it rests on the same feature set as every other result reported here. The regeneration left all three conclusions unchanged: the same $\beta$ safe range, the same 71 of 115 threshold pairs, and the same insensitivity to the clip ratio, with absolute AUROC shifting by less than $0.002$ throughout. The one difference is that detection past $\beta=0.70$ degrades slightly more sharply on the corrected data than on the earlier feature set, which strengthens rather than weakens the case for the chosen operating point. Figure~\ref{fig:heatmap} shows the threshold sweep as two panels: detection rate (uniformly $100\%$ across the valid region) and false-positive rate (the quantity that actually varies). The zero-FPR region is a broad plateau rather than a knife-edge, and the default operating point sits comfortably inside it.
 
 \begin{figure}[t]
 \centering
@@ -500,14 +547,15 @@ Table~\ref{tab:sensitivity} summarizes the sensitivity analysis. Detection is st
 \end{figure}
 
 \begin{table}[t]
-\caption{Hyperparameter sensitivity summary.}
+\caption{Hyperparameter sensitivity summary, 139 single-seed grid points on the 265-feature data. The $\beta$ and clip-ratio rows are measured on the Exp~1 gradient-scaling setting and the threshold row on the harder Exp~3 attack-plus-straggler setting.}
 \label{tab:sensitivity}
 \centering
 \begin{tabular}{lll}
 \toprule
 Parameter & Safe operating range & Summary statistic \\
 \midrule
-$\beta$ & 0.10--0.70 & 77.8\% of tested values retain 100\% DR \\
+$\beta$ (gradient scaling) & 0.10--0.70 & 77.8\% of tested values retain 100\% DR \\
+$\beta$ (free rider) & 0.10--0.90 & All tested values retain 100\% DR \\
 Threshold pair & 71/115 valid pairs & 61.7\% retain 100\% DR and 0\% FPR \\
 Clip ratio & 1.5--4.0 & All tested values retain 100\% DR and 0\% FPR \\
 \bottomrule
@@ -564,9 +612,48 @@ SENTINEL-SplitFed adds no additional client-server communication beyond the unde
 
 The Krum comparison is the most important interpretive result. If the only metric is AUROC, Krum appears superior. However, its behavior is closer to client selection than federated aggregation in this low-client non-IID setting. Repeatedly selecting Client 0 can perform well when that partition is predictive, but it eliminates contributions from Surgical and Cardiac clients. This is made explicit by the contribution-entropy metric (Table~\ref{tab:entropy}): Krum operates at $H=0.000$ in every round of every experiment (single-client collapse), while SNAS operates at $H=0.986$ when no attacker is present and reduces entropy only in proportion to how much weight it withdraws from a detected adversary. The gate ablation (Table~\ref{tab:ablation}) completes the picture: the no-detection baseline weights all clients but cannot exclude the attacker, so it retains the poison and loses accuracy under the free-rider attack. SNAS is thus the only evaluated configuration that simultaneously keeps every honest client in the aggregate and resists poisoning. For critical-care federation this matters because the objective is not merely to maximize a global validation number, but to learn collaboratively across heterogeneous clinical domains. Further per-domain AUROC and minimum-contribution-rate reporting are natural complements for future multi-institution deployments.
 
+\subsection{Why the detector scores absolute weights rather than updates}\label{sec:basis}
+
+A natural objection to the cosine term of the Staleness-Normalized Anomaly Score (Section~\ref{sec:method}) is that $\cos(\theta_i, \theta^g)$ is dominated by the shared base model: every client begins the round \emph{from} $\theta^g$ and takes a small step, so $\theta_i = \theta^g + \Delta_i$ with $\lVert\Delta_i\rVert \ll \lVert\theta^g\rVert$, and the cosine is close to unity for honest and adversarial clients alike. The objection is correct about the mechanism. It does not, however, follow that scoring the update $\Delta_i$ instead would detect better, and at this federation size it detects appreciably worse.
+
+We tested this directly. A parallel arm recomputes both weight signals on $\Delta_i$, referenced against the mean \emph{direction} of the other clients' updates, leaving everything else identical --- same seeds, same attacks, gate disabled in both arms so that at each seed the two bases are scored on the same training trajectory (their final AUROCs agree to four decimal places). Because the gate never fires, this compares the separability of the score itself rather than a threshold calibrated for one basis and applied to the other. We therefore report the rank-based AUC of the score and the detection rate attainable at zero false positives, which is what a perfectly recalibrated threshold could achieve.
+
+The absolute basis separates attacker from honest observations perfectly on all three attacks (AUC $1.000$, $100\%$ detection at zero false positives). The update basis matches it only on the free rider; on gradient scaling it falls to $12.5\%$ detection at zero false positives (AUC $0.891$), and on the attack-plus-straggler setting it is \emph{at chance} (AUC $0.514$). Two mechanisms account for this, and both are properties of the client count rather than of the implementation.
+
+First, the peer reference is itself attackable at $N=3$. Each honest client's leave-one-out reference comprises one honest peer and the attacker, so the adversary contributes half of the reference against which everyone else is judged. This lifts honest scores far more than the attacker's --- from $0.161$ to $0.306$ on gradient scaling --- collapsing the separation ratio from $2.30$ to $1.37$. An earlier variant using the raw peer mean was worse still: a $10\times$ attacker produces an update roughly $900$ times the honest norm, so the two-peer mean is essentially the attacker's own vector and the honest clients score \emph{above} it, inverting the ranking entirely.
+
+Second, and decisively, at $n=2$ the update-space signal carries no information at all, and provably so. With a single peer $j$, the reference for client $i$ is $\Delta_j/\lVert\Delta_j\rVert$, so
+\[
+A^{\mathrm{cos}}_i = 1 - \cos(\Delta_i, \Delta_j) = A^{\mathrm{cos}}_j
+\]
+by symmetry of the cosine, and the norm term degenerates identically since $\lvert\log(a/b)\rvert = \lvert\log(b/a)\rvert$. Attacker and honest client receive \emph{identical} scores. This is confirmed in the logs: in every round of the straggler experiment where one client misses the window, the two remaining clients record byte-identical cosine and norm anomalies. Since $30\%$ of rounds in that setting aggregate only two clients, the chance-level AUC is the expected outcome rather than an anomaly.
+
+The absolute basis is immune to both failures because its reference --- the previous round's global encoder --- is an anchor that the current round's attacker cannot influence and that exists regardless of how many clients arrived. This is the detection-side counterpart of the aggregation-side result in Section~\ref{sec:results}: peer-referenced robustness and peer-referenced detection both lose their guarantee when the peer set shrinks under asynchrony, while anchored alternatives do not. We therefore retain the absolute basis, and note that both effects should weaken as $N$ grows, since the reference stops being half adversary and a single dropout no longer forces $n=2$.
+
 \subsection{Robustness boundary of memoryless SNAS}
 
 The strategic alternation attack shows that staleness normalization must be designed carefully. The same denominator that protects honest stragglers can be exploited by a client that deliberately misses rounds before submitting poisoned updates. This does not invalidate SNAS, but it clarifies the threat model: memoryless per-round gates are insufficient against adversaries that manipulate their own participation schedule.
+
+However, this vulnerability is inherently self-limiting, because the staleness counter $\tau$ enters the framework in two places with opposing effects for the attacker. In the detection gate, $\tau$ appears in the denominator $1/(1+\tau)$, so increasing $\tau$ lowers the SNAS score and aids evasion. But $\tau$ \emph{also} governs the aggregation weight through the staleness decay $d(\tau)$ (Section~\ref{sec:agg}): a stale submission is weighted by $d(\tau)$, which \emph{decreases} in $\tau$. An attacker therefore cannot raise $\tau$ to shrink its detection score without simultaneously shrinking its influence on the aggregate. Moreover, to hold a fixed staleness $\tau$ at every malicious submission, the adversary must abstain for $\tau$ rounds between attacks, so it poisons at most a $1/(1+\tau)$ fraction of rounds. The effective poisoning power --- the product of attack frequency and per-submission aggregation weight --- therefore collapses as $\tau$ grows.
+
+\begin{table}[t]
+\caption{Evasion--influence tradeoff for the attack-then-abstain adversary under the default exponential decay $d(\tau)=e^{-0.5\tau}$. A larger $\tau$ lowers the SNAS score (aiding evasion) but simultaneously lowers both the attack frequency and the per-submission aggregation weight, so the effective poisoning power collapses.}
+\label{tab:tradeoff}
+\centering
+\begin{tabular}{ccccc}
+\toprule
+Staleness $\tau$ & SNAS factor $\tfrac{1}{1+\tau}$ & Attack frequency & Agg.\ weight $d(\tau)$ & Effective poisoning $\propto$ freq $\times\, d(\tau)$ \\
+\midrule
+1 & 0.50 & 1/2 & 0.61 & 0.30 \\
+2 & 0.33 & 1/3 & 0.37 & 0.12 \\
+3 & 0.25 & 1/4 & 0.22 & 0.056 \\
+6 & 0.14 & 1/7 & 0.05 & 0.007 \\
+7 & 0.13 & 1/8 & 0.03 & 0.004 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:tradeoff} makes this explicit under the default exponential decay. The attack-then-abstain strategy is most damaging at $\tau=1$ --- the minimum abstention that still yields the evasion benefit --- which is exactly the configuration evaluated in Table~\ref{tab:adaptive}, where the AUROC degradation is only $-0.004$. Pushing $\tau$ to $6$ or $7$ shrinks the SNAS score further, but the attacker then submits only once every seven or eight rounds, and each submission carries roughly $3$--$5\%$ weight, reducing effective poisoning power by more than an order of magnitude relative to $\tau=1$. Under step decay the attacker retains full weight while $\tau$ stays within the cutoff (which is why step decay shows the largest damage in Table~\ref{tab:adaptive}), but any $\tau$ beyond the cutoff removes it from aggregation entirely. The staleness-normalized gate thus admits an evasion window, yet the same staleness that opens it caps the harm an evading attacker can inflict.
 
 A natural mitigation is temporal accumulation. For example, the server can maintain an exponential moving average
 \begin{equation}
@@ -576,11 +663,15 @@ or separately accumulate the numerator terms before staleness normalization. Ano
 
 \subsection{Scope and limitations}\label{sec:limitations}
 
-This study has six main limitations. First, the benchmark uses three clients, reflecting a realistic low-client healthcare federation but limiting conclusions about large-scale cross-device FL. This bound is also what places Krum outside its own $N\geq2f+3$ validity condition, so the Krum comparison in Section~\ref{sec:results} characterizes Krum's behavior in an under-specified regime rather than a fair test of Krum at its intended operating point; a federation of $N\geq5$ is required for that comparison to be conclusive.
+This study has seven main limitations. First, the benchmark uses three clients, reflecting a realistic low-client healthcare federation but limiting conclusions about large-scale cross-device FL. This bound is also what places Krum outside its own $N\geq2f+3$ validity condition, so the Krum comparison in Section~\ref{sec:results} characterizes Krum's behavior in an under-specified regime rather than a fair test of Krum at its intended operating point; a federation of $N\geq5$ is required for that comparison to be conclusive.
 
 Second, and most important for interpreting the absolute predictive numbers, \textbf{the benchmark is not a clinically valid mortality model and its AUROC should not be compared against the published MIMIC-IV literature}. As detailed in Section~\ref{sec:setup}, features are aggregated over the whole admission and whole ICU stay with no early observation window, so for non-survivors the feature window extends through terminal deterioration; and the train/validation split is at row level rather than patient or admission level, so ICU stays belonging to the same admission can appear on both sides carrying identical laboratory blocks and identical labels. Both effects inflate AUROC. Excluding length of stay removes the single most direct leak but does not remove these two. A clinically comparable benchmark would require a fixed early observation window (for example, first-24-hour features) and a group-aware split on \texttt{subject\_id}, together with a held-out test set; we did not run that variant here. Because every aggregator is evaluated on the identical pipeline, the \emph{relative} security findings that constitute this paper's contribution are unaffected, but the absolute number is a property of the substrate rather than a clinical result.
 
-Third, the sensitivity sweep is single-seed for compute tractability, although the main attack settings are repeated over ten seeds. Fourth, SNAS evaluates encoder submissions but does not provide cryptographic privacy or formal Byzantine guarantees. Fifth, the threat model covers encoder-submission attacks only: poisoning of the server-side top model $g_\phi$ during split training is out of scope and undefended, as stated in Section~\ref{sec:problem}. Sixth, the current adaptive mitigation is discussed but not fully implemented as a new defense. These limitations point directly to future work on windowed and group-split benchmark construction, distributed deployment, larger client counts, server-head defenses, temporal anomaly memory, and privacy-enhancing split-learning mechanisms.
+Third, the sensitivity sweep is single-seed for compute tractability, although the main attack settings are repeated over ten seeds. Fourth, SNAS evaluates encoder submissions but does not provide cryptographic privacy or formal Byzantine guarantees. Fifth, the threat model covers encoder-submission attacks only: poisoning of the server-side top model $g_\phi$ during split training is out of scope and undefended, as stated in Section~\ref{sec:problem}. Sixth, the current adaptive mitigation is discussed but not fully implemented as a new defense.
+
+Seventh, and important for how the federated setting itself should be read: \textbf{this is a single-centre benchmark, and its clients are not independent institutions}. MIMIC-IV is collected at one hospital, so the partitions used here are care units within a single centre --- sharing one electronic health record system, one laboratory, one set of clinical protocols and one patient catchment. Partitioning by ICU unit yields genuine covariate and prevalence heterogeneity, and mortality prevalence spans a factor of $2.3$ across the three clients, which is the non-IID stress the aggregation methods are evaluated against. But it is a \emph{proxy} for cross-institutional heterogeneity, not an instance of it: real hospitals differ additionally in coding practice, instrumentation, case mix and data quality, and those differences are exactly the ones that make federated learning necessary rather than merely convenient. We therefore claim only that SNAS is evaluated under realistic within-centre non-IID conditions, and not that it has been validated across institutions. Multi-centre validation on a second, genuinely multi-hospital corpus such as eICU is the natural next step and is left to future work.
+
+These limitations point directly to future work on windowed and group-split benchmark construction, multi-centre validation, distributed deployment, larger client counts, server-head defenses, temporal anomaly memory, and privacy-enhancing split-learning mechanisms.
 
 \section{Conclusion}\label{sec:conclusion}
 

@@ -1,0 +1,24 @@
+mode: option_b
+num_rounds: 10
+local_epochs: 1
+batch_size: 64
+fedavg_every_round: true
+description: >
+  Paper Experiment E6 — Honest straggler, no attack.
+  Client 2 (Cardiac) chronically misses the aggregation window (30s delay
+  exceeds 25s window). Server aggregates with Medical + Surgical only.
+  Validates low false-positive rate: Client 2's SNAS stays below quarantine
+  threshold despite high staleness because the staleness dampening (1+tau)
+  suppresses its anomaly score.
+server_url: http://127.0.0.1:8000
+auth_token: dev-sfl-token
+results_dir: results/cliponly/e6_dropout
+
+fedavg_wait_seconds: 120.0
+
+delay_config:
+  0: 0    # Medical  — immediate
+  1: 5    # Surgical — 5s lag (within window)
+  2: 30   # Cardiac  — 30s lag (exceeds 25s window → misses every round)
+
+attack_config: {}

@@ -66,6 +66,12 @@ GRID: dict[str, dict[str, str]] = {
         "E2_free_rider":       "configs/experiment_e2_free_rider.yaml",
         "E4_attack_straggler": "configs/experiment_e4_attack_plus_dropout.yaml",
         "E6_honest_straggler": "configs/experiment_e6_dropout.yaml",
+        # P1-2: implemented in attack_simulator.py since the first version but
+        # never executed. Both perturb direction more than magnitude, so they
+        # exercise the SNAS cosine term rather than the norm term that
+        # gradient scaling drives.
+        "E3_label_flip":       "configs/experiment_e3_label_flip.yaml",
+        "E5_backdoor":         "configs/experiment_e5_backdoor.yaml",
     },
     "krum": {
         "E1_gradient_scaling": "configs/experiment_baseline_krum_e1_gradient_scaling.yaml",
@@ -76,6 +82,15 @@ GRID: dict[str, dict[str, str]] = {
         "E1_gradient_scaling": "configs/experiment_baseline_trimmed_mean_e1_gradient_scaling.yaml",
         "E2_free_rider":       "configs/experiment_baseline_trimmed_mean_e2_free_rider.yaml",
         "E4_attack_straggler": "configs/experiment_baseline_trimmed_mean_e4_attack_plus_dropout.yaml",
+    },
+    # P1-3. Trimmed mean at trim_ratio=0.2 trims floor(0.2*3)=0 coordinates and
+    # is arithmetically plain FedAvg here, so it is not actually a robust
+    # baseline at n=3. The coordinate-wise median is, and runs on the same
+    # three attack settings for a like-for-like comparison.
+    "median": {
+        "E1_gradient_scaling": "configs/experiment_baseline_median_e1_gradient_scaling.yaml",
+        "E2_free_rider":       "configs/experiment_baseline_median_e2_free_rider.yaml",
+        "E4_attack_straggler": "configs/experiment_baseline_median_e4_attack_plus_dropout.yaml",
     },
     "fltrust": {
         "E1_gradient_scaling": "configs/experiment_baseline_fltrust_e1_gradient_scaling.yaml",
@@ -91,6 +106,35 @@ GRID: dict[str, dict[str, str]] = {
         "E4_attack_straggler": "configs/experiment_nogate_e4_attack_plus_dropout.yaml",
         "E6_honest_straggler": "configs/experiment_nogate_e6_dropout.yaml",
     },
+    # P1-1 factorial ablation. "snas" and "nodetect" above are the both-on and
+    # both-off corners; these two are the mixed corners, so gate and clipping
+    # can be credited separately instead of only as a bundle. Configs are
+    # byte-identical to the nogate ones except results_dir -- the arms differ
+    # only through overrides_for().
+    "cliponly": {
+        "E1_gradient_scaling": "configs/experiment_cliponly_e1_gradient_scaling.yaml",
+        "E2_free_rider":       "configs/experiment_cliponly_e2_free_rider.yaml",
+        "E4_attack_straggler": "configs/experiment_cliponly_e4_attack_plus_dropout.yaml",
+        "E6_honest_straggler": "configs/experiment_cliponly_e6_dropout.yaml",
+    },
+    "gateonly": {
+        "E1_gradient_scaling": "configs/experiment_gateonly_e1_gradient_scaling.yaml",
+        "E2_free_rider":       "configs/experiment_gateonly_e2_free_rider.yaml",
+        "E4_attack_straggler": "configs/experiment_gateonly_e4_attack_plus_dropout.yaml",
+        "E6_honest_straggler": "configs/experiment_gateonly_e6_dropout.yaml",
+    },
+    # P1-5. Identical to the `nodetect` arm in every respect except that SNAS
+    # is computed on updates (theta_i - theta^g) against a leave-one-out peer
+    # reference instead of on absolute weights against theta^g. The gate is
+    # left off, so the training trajectory is bit-for-bit the nodetect one at
+    # the same seed and the two bases can be compared on identical rounds --
+    # this measures the detection *signal*, not a threshold that was never
+    # calibrated for this basis.
+    "deltadet": {
+        "E1_gradient_scaling": "configs/experiment_deltadet_e1_gradient_scaling.yaml",
+        "E2_free_rider":       "configs/experiment_deltadet_e2_free_rider.yaml",
+        "E4_attack_straggler": "configs/experiment_deltadet_e4_attack_plus_dropout.yaml",
+    },
 }
 
 # /admin/reset MERGES overrides into the live config rather than replacing it, so
@@ -98,23 +142,50 @@ GRID: dict[str, dict[str, str]] = {
 # therefore states the gate parameters explicitly in both directions — otherwise
 # the nodetect arm's 1e9 thresholds would leak into every run after it and
 # silently disable the gate for the aggregators that are supposed to have it on.
-GATE_ON = {
-    "snas_threshold_flag": 0.22,
-    "snas_threshold_quarantine": 0.35,
-    "fedavg_clip_ratio": 2.0,
+# The two defences are separate factors, not one switch, so P1-1 can attribute
+# the benefit to each. Thresholds of 1e9 make the gate unreachable; a clip ratio
+# of 1e9 makes the norm clip non-binding. Values match configs/server.yaml.
+GATE_ON = {"snas_threshold_flag": 0.22, "snas_threshold_quarantine": 0.35}
+GATE_OFF = {"snas_threshold_flag": 1e9, "snas_threshold_quarantine": 1e9}
+CLIP_ON = {"fedavg_clip_ratio": 2.0}
+CLIP_OFF = {"fedavg_clip_ratio": 1e9}
+
+# SNAS-family group -> (anomaly gate enabled, norm clipping enabled).
+# The four entries are the 2x2 factorial cells of P1-1. Baseline aggregators
+# (krum/trimmed_mean/fltrust/median) are not in this table and run with both
+# defences on, exactly as they did for the 180-run P0 grid.
+FACTORIAL_ARMS = {
+    "snas":     (True,  True),
+    "nodetect": (False, False),
+    "gateonly": (True,  False),
+    "cliponly": (False, True),
+    # Log-only: scores are recorded, no client is ever excluded.
+    "deltadet": (False, False),
 }
-GATE_OFF = {
-    "snas_threshold_flag": 1e9,
-    "snas_threshold_quarantine": 1e9,
-    "fedavg_clip_ratio": 1e9,
-}
+
+# P1-5. Only the deltadet arm scores updates; everything else uses the
+# absolute-weight basis every published result was produced with.
+ANOMALY_BASIS = {"deltadet": "delta"}
 
 
 def overrides_for(group: str, seed: int) -> dict:
-    """config_overrides posted to /admin/reset for one run."""
-    aggregator = "snas" if group == "nodetect" else group
-    gate = GATE_OFF if group == "nodetect" else GATE_ON
-    return {"seed": seed, "aggregator_type": aggregator, **gate}
+    """config_overrides posted to /admin/reset for one run.
+
+    Every gate and clip parameter is stated explicitly in both directions
+    because /admin/reset MERGES overrides into the live config: a value left
+    unset persists from whichever run set it last, which would silently carry
+    one arm's settings into the next.
+    """
+    gate_on, clip_on = FACTORIAL_ARMS.get(group, (True, True))
+    aggregator = "snas" if group in FACTORIAL_ARMS else group
+    return {
+        "seed": seed,
+        "aggregator_type": aggregator,
+        **(GATE_ON if gate_on else GATE_OFF),
+        **(CLIP_ON if clip_on else CLIP_OFF),
+        # Stated in both directions for the same merge reason as the gate params.
+        "snas_anomaly_basis": ANOMALY_BASIS.get(group, "absolute"),
+    }
 
 MAX_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = [10, 30]

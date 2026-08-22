@@ -1,0 +1,7 @@
+experiment,basis,arm,n_seeds,n_attacker_obs,n_honest_obs,mean_attacker,mean_honest,separation,roc_auc,dr_at_zero_fpr,n_nonfinite_excluded
+E1_gradient_scaling,absolute,nodetect,10,80,160,0.37,0.1606,2.3,1.0,1.0,0
+E1_gradient_scaling,delta,deltadet,10,80,160,0.4208,0.3061,1.37,0.8906,0.125,0
+E2_free_rider,absolute,nodetect,10,80,160,0.4149,0.051,8.14,1.0,1.0,0
+E2_free_rider,delta,deltadet,10,80,160,0.5633,0.2105,2.68,1.0,1.0,0
+E4_attack_straggler,absolute,nodetect,10,80,80,0.3909,0.1824,2.14,1.0,1.0,0
+E4_attack_straggler,delta,deltadet,10,60,60,0.439,0.3814,1.15,0.5138,0.1667,40
