@@ -38,11 +38,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# The n=6 server config writes to server_n6/; the log has also been handed over
-# as a copy under server/. Try both, newest first, so this works either way.
+# Order matters. The first entry is the handed-over log of the E1 grid, which is
+# what tab:n6-krum reports. The second is where configs/server_n6.yaml writes,
+# and it ACCUMULATES every later n=6 experiment (E2, clean, ...) in the same
+# file -- server logs are append-only and are not keyed by experiment. Preferring
+# it would silently report a later experiment's selections as Table 6's numbers.
+# Use --log explicitly to analyse anything other than the E1 grid.
 CANDIDATE_LOGS = [
-    ROOT / "results" / "label_private_splitfed" / "server_n6" / "server_metrics.jsonl",
     ROOT / "results" / "label_private_splitfed" / "server" / "server_metrics_nihal_p08(1).jsonl",
+    ROOT / "results" / "label_private_splitfed" / "server_n6" / "server_metrics.jsonl",
 ]
 
 OUT_CSV = ROOT / "results" / "n6_krum_selection.csv"
@@ -157,8 +161,15 @@ def main() -> None:
     print(f"source log      : {payload['source_log']}")
     print(f"records in log  : {len(recs)}")
     print(f"smoke excluded  : {len(smoke)} (split at a {gap / 60:.1f} min gap)")
-    print(f"grid decisions  : {n}"
-          + ("" if n == EXPECTED_ROUNDS else f"  [expected {EXPECTED_ROUNDS}]"))
+    print(f"grid decisions  : {n}")
+    if n != EXPECTED_ROUNDS:
+        print()
+        print(f"  !! WARNING: expected {EXPECTED_ROUNDS} decisions "
+              f"(5 seeds x 10 rounds), got {n}.")
+        print("     The n=6 server log accumulates every experiment run against it,")
+        print("     so this is probably not the E1 grid alone. tab:n6-krum reports E1.")
+        print("     Point --log at the E1 log, or filter by the grid's time window.")
+        print()
     print()
     print(f"{'client':>7s} {'role':>9s} {'selections':>11s} {'share':>7s}")
     print("-" * 38)
