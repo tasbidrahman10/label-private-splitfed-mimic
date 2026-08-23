@@ -40,7 +40,7 @@
 \affil[2]{\orgdiv{Department of Electrical and Electronic Engineering}, \orgname{Bangladesh University of Engineering and Technology}, \orgaddress{\city{Dhaka}, \country{Bangladesh}}}
 \affil[3]{\orgdiv{Department of Computer Science and Engineering}, \orgname{Khulna University of Engineering \& Technology}, \orgaddress{\city{Khulna}, \country{Bangladesh}}}
 
-\abstract{Split federated learning (SplitFed) pairs the label locality of split learning with federated aggregation, but existing pipelines assume synchronous aggregation and benign clients. We propose SENTINEL-SplitFed, a server-side extension that replaces blocking aggregation with timed submission windows, tracks per-client staleness, and gates each submission by a Staleness-Normalized Anomaly Score (SNAS) combining cosine and norm encoder anomalies discounted by benign delay-induced staleness. On a three-client non-IID MIMIC-IV mortality benchmark, SNAS detects gradient-scaling, free-rider, label-flip and sparse-corruption attacks in 100\% of post-warm-up attacker submissions (8/8, Wilson 95\% CI $[0.68,1.00]$) at no observed false positives (0/16, CI $[0.00,0.19]$), and does not falsely quarantine honest stragglers. Detection is not exclusion: direction-driven attacks score between the flag and quarantine thresholds, so the sparse-corruption attack is flagged every round yet still inflicts the largest degradation measured ($0.7008$ AUROC against a $0.9651$ clean baseline). Two headline comparisons do not survive a valid configuration, and we report both. At $N=3$ SNAS beats trimmed mean and FLTrust on every attack setting, ten of ten paired seeds (Wilcoxon $p=0.00195$); repartitioning into six clients, where Krum's $N\geq2f+3$ condition holds and the trimmed mean stops discarding zero values, shows this to be a property of those baselines rather than of SNAS --- trimmed mean gains $0.134$ AUROC on the free-rider attack and overtakes it, placing SNAS fourth of five. Krum's apparent $N=3$ advantage is likewise a tie-break artifact that disappears at $N=6$. SNAS's advantage is confined to the setting it targets, a client straggling from a small federation, where quorum-dependent robustness degrades while per-submission detection does not; that setting is evaluated at $N=3$ only. Adaptive experiments identify a further boundary: an attack-then-abstain adversary evades memoryless staleness normalization, which we show to be self-limiting.}
+\abstract{Split federated learning (SplitFed) pairs the label locality of split learning with federated aggregation, but existing pipelines assume synchronous aggregation and benign clients. We propose SENTINEL-SplitFed, a server-side extension that replaces blocking aggregation with timed submission windows, tracks per-client staleness, and gates each submission by a Staleness-Normalized Anomaly Score (SNAS) combining cosine and norm encoder anomalies discounted by benign delay-induced staleness. On a three-client non-IID MIMIC-IV mortality benchmark, SNAS detects gradient-scaling, free-rider, label-flip and backdoor attacks (the last a sparse weight corruption, not a trigger-based backdoor) in 100\% of post-warm-up attacker submissions (8/8, Wilson 95\% CI $[0.68,1.00]$) at no observed false positives (0/16, CI $[0.00,0.19]$), and does not falsely quarantine honest stragglers. Detection is not exclusion: direction-driven attacks score between the flag and quarantine thresholds, so the backdoor arm is flagged every round yet still inflicts the largest degradation measured ($0.7008$ AUROC against a $0.9651$ clean baseline). Two headline comparisons do not survive a valid configuration, and we report both. At $N=3$ SNAS beats trimmed mean and FLTrust on every attack setting, ten of ten paired seeds (Wilcoxon $p=0.00195$); repartitioning into six clients, where Krum's $N\geq2f+3$ condition holds and the trimmed mean stops discarding zero values, shows this to be a property of those baselines rather than of SNAS --- trimmed mean gains $0.134$ AUROC on the free-rider attack and overtakes it, placing SNAS fourth of five. Krum's apparent $N=3$ advantage is likewise a tie-break artifact that disappears at $N=6$. SNAS's advantage is confined to the setting it targets, a client straggling from a small federation, where quorum-dependent robustness degrades while per-submission detection does not; that setting is evaluated at $N=3$ only. Adaptive experiments identify a further boundary: an attack-then-abstain adversary evades memoryless staleness normalization, which we show to be self-limiting.}
 
 \keywords{split federated learning, asynchronous federated learning, Byzantine robustness, intrusion detection, critical-care machine learning, MIMIC-IV, IoMT}
 
@@ -214,7 +214,7 @@ The default thresholds are $\delta_{\mathrm{flag}}=0.22$ and $\delta_{\mathrm{qu
 \scriptsize
 \setlength{\tabcolsep}{3pt}
 \renewcommand{\arraystretch}{1.18}
-\begin{tabularx}{\textwidth}{@{}p{2.05cm}p{2.25cm}ccc>{\raggedright\arraybackslash}X@{}}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.15cm}>{\raggedright\arraybackslash}p{2.35cm}ccc>{\raggedright\arraybackslash}X@{}}
 \toprule
 Method & Main goal & Async & Robust & SplitFed & Behavior in our setting \\
 \midrule
@@ -241,14 +241,14 @@ Krum
 & At $N=3$ higher raw AUROC, but selects one client every round, collapsing federation --- a tie-break artifact of violating $N\geq2f+3$. Resolves at $N=6$ (Section~\ref{sec:n6}). \\
 
 Trimmed mean
-& Coordinate-wise robust aggregation
+& Coordinate-wise robust agg.
 & No
 & Yes
 & No
 & Degenerates at three clients: with trim ratio 0.2, $\lfloor0.2\times3\rfloor=0$ values are trimmed and the rule is the unweighted mean. Valid at $N=6$. \\
 
 Coordinate median
-& Coordinate-wise robust aggregation
+& Coordinate-wise robust agg.
 & No
 & Yes
 & No
@@ -261,15 +261,15 @@ FLTrust
 & No
 & Functions once adapted to SplitFed --- reference gradient taken from the previous round's encoder, trust computed over updates --- but degenerates silently to uniform averaging without both adaptations. \\
 
-Temporal poisoning detectors
-& Detect inconsistent update trajectories
+Temporal detectors
+& Detect inconsistent update paths
 & Limited
 & Yes
 & No
 & Motivate temporal SNAS accumulation, but are not directly designed for SplitFed encoder aggregation. \\
 
 \textbf{SENTINEL-SplitFed}
-& Intrusion-resilient asynchronous SplitFed
+& Intrusion-resilient async SplitFed
 & \textbf{Yes}
 & \textbf{Yes}
 & \textbf{Yes}
@@ -396,7 +396,7 @@ The ten-seed results address sensitivity to random initialization and minibatch 
 
 Per-client AUPRC does not simply track prevalence. On the clean baseline the Surgical partition attains the highest value ($0.864$ at $11.5\%$ prevalence), ahead of Medical ($0.832$ at $16.1\%$) and Cardiac ($0.847$ at $6.9\%$). Prevalence therefore does not determine separability here, and the aggregate is not carried by any single partition; per-client values for every cell are reported in the supplementary material.
 
-\paragraph{Two further attack types, and the limit of a single quarantine threshold.} Exp~5 and Exp~6 exercise the two attacks that perturb the \emph{direction} of the submitted encoder rather than its magnitude: a label-flip proxy adding structured Gaussian noise, and a backdoor perturbing a random $10\%$ of weights by $+5$. Both are detected in $100\%$ of post-warm-up attacker rounds with no false positives, so the gate sees them as reliably as it sees gradient scaling.
+\paragraph{Two further attack types, and the limit of a single quarantine threshold.} Exp~5 and Exp~6 exercise the two attacks that perturb the \emph{direction} of the submitted encoder rather than its magnitude: a label-flip proxy adding i.i.d.\ Gaussian noise, and a backdoor perturbing a random $10\%$ of weights by $+5$ (Section~\ref{sec:problem} states precisely what these names do and do not imply; the backdoor arm is a sparse weight corruption, not a trigger-based backdoor). Both are detected in $100\%$ of post-warm-up attacker rounds with no false positives, so the gate sees them as reliably as it sees gradient scaling.
 
 What separates them is what happens next. Their mean SNAS scores are $0.280$ and $0.302$, which clear the flag threshold $\delta_{\mathrm{flag}}=0.22$ but fall below $\delta_{\mathrm{quarantine}}=0.35$; the attacker is consequently quarantined in $0\%$ and $7.5\%$ of rounds respectively, against $71.2\%$ for gradient scaling and $100\%$ for the free rider. Being flagged carries only an aggregation penalty, so the poisoned update keeps entering the aggregate at reduced weight. \textbf{The backdoor is in consequence the most damaging attack evaluated in this study} --- $0.7008$ AUROC and, strikingly, $0.2459$ AUPRC against a clean baseline of $0.8475$ --- despite being detected in every round.
 
@@ -432,12 +432,12 @@ Figure~\ref{fig:baselines} visualizes these comparisons. The free-rider setting 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/fig_baseline_comparison.pdf}
-\caption{Aggregator comparison across Exp~1, Exp~2, and Exp~3. All bars are ten-seed means. Krum attains the highest raw AUROC but does so by selecting Client 0 in every aggregation round (300 of 300 selection decisions, zero exceptions) — a tie-break artifact of $N=3$ falling outside Krum's $N\geq2f+3$ validity condition, not a robustness property (Section~\ref{sec:n6}) — discarding the Surgical and Cardiac partitions. Exp~2 (free rider) is the setting that separates the aggregators: SNAS leads FLTrust by $+0.033$ and trimmed mean by $+0.085$ AUROC, each on ten of ten paired seeds.}
+\caption{Aggregator comparison across Exp~1, Exp~2, and Exp~3. All bars are ten-seed means. Krum attains the highest raw AUROC but does so by selecting Client 0 in every aggregation round (300 of 300 selection decisions, zero exceptions) — a tie-break artifact of $N=3$ falling outside Krum's $N\geq2f+3$ validity condition, not a robustness property (Section~\ref{sec:n6}) — discarding the Surgical and Cardiac partitions. Exp~2 (free rider) is the setting that separates the aggregators: SNAS leads FLTrust by $+0.033$ and trimmed mean by $+0.085$ AUROC, each on ten of ten paired seeds. \textbf{The trimmed-mean margin does not survive a valid configuration}: at $N=6$ trimmed mean gains $0.134$ AUROC and overtakes SNAS, and the lead shown here is retracted at $N\geq6$ (Section~\ref{sec:n6}).}
 \label{fig:baselines}
 \end{figure}
 
 \begin{table}[htbp]
-\caption{Baseline comparison. \textbf{All values are ten-seed means}, reported as AUROC~/~AUPRC per cell. Krum reaches higher raw AUROC but collapses federation by repeatedly selecting one client. The AUPRC column is the more discriminating one: on the free-rider attack (Exp~2) SNAS leads trimmed mean by $+0.085$ AUROC but by $+0.248$ AUPRC, and FLTrust by $+0.033$ AUROC but $+0.118$ AUPRC, so AUROC materially understates the separation between the aggregators at this prevalence.}
+\caption{Baseline comparison. \textbf{All values are ten-seed means}, reported as AUROC~/~AUPRC per cell. Krum reaches higher raw AUROC but collapses federation by repeatedly selecting one client. The AUPRC column is the more discriminating one: on the free-rider attack (Exp~2) SNAS leads trimmed mean by $+0.085$ AUROC but by $+0.248$ AUPRC, and FLTrust by $+0.033$ AUROC but $+0.118$ AUPRC, so AUROC materially understates the separation between the aggregators at this prevalence. \textbf{The trimmed-mean column must be read against Section~\ref{sec:n6}}: at $N=3$ the rule trims zero values and is plain averaging, and once validly configured at $N=6$ it overtakes SNAS on this attack. The lead over trimmed mean shown here is a property of that degenerate configuration and is retracted at $N\geq6$.}
 \label{tab:baselines}
 \centering
 \begin{tabularx}{\textwidth}{@{}lccc>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
@@ -454,7 +454,7 @@ FLTrust & 0.9593~/~0.8290 & 0.8762~/~0.5548 & 0.9583~/~0.8261 & Yes & Nominally 
 \end{tabularx}
 \end{table}
 
-All nine SNAS--baseline comparisons are statistically significant, and every one is decided unanimously across seeds. Against the two aggregators that genuinely federate, SNAS wins ten of ten paired seeds in all three experiments: over trimmed mean by $+0.0044$ (Exp~1), $+0.0852$ (Exp~2) and $+0.0035$ (Exp~3), and over FLTrust by $+0.0020$, $+0.0332$ and $+0.0013$ respectively. Against Krum the direction reverses, also ten of ten, by $-0.0033$, $-0.0553$ and $-0.0051$. Because every comparison is unanimous, each attains the two-sided Wilcoxon floor at $n=10$ ($p=0.00195$); the paired $t$-tests agree ($p$ from $3\times10^{-4}$ to $9\times10^{-10}$), with large paired effect sizes (Cohen's $d$ from $1.8$ to $8.2$ in magnitude). Effect sizes are computed as the mean paired difference divided by the standard deviation of those differences, the appropriate estimator for a paired design.
+All nine SNAS comparisons against Krum, trimmed mean and FLTrust are statistically significant, and every one is decided unanimously across seeds; the three median comparisons are reported separately above, and the twelve together form the aggregator family corrected for in Section~\ref{sec:setup}. Against the two aggregators that genuinely federate, SNAS wins ten of ten paired seeds in all three experiments: over trimmed mean by $+0.0044$ (Exp~1), $+0.0852$ (Exp~2) and $+0.0035$ (Exp~3), and over FLTrust by $+0.0020$, $+0.0332$ and $+0.0013$ respectively. Against Krum the direction reverses, also ten of ten, by $-0.0033$, $-0.0553$ and $-0.0051$. Because every comparison is unanimous, each attains the two-sided Wilcoxon floor at $n=10$ ($p=0.00195$); the paired $t$-tests agree ($p$ from $3\times10^{-4}$ to $9\times10^{-10}$), with large paired effect sizes (Cohen's $d$ from $1.8$ to $8.2$ in magnitude). Effect sizes are computed as the mean paired difference divided by the standard deviation of those differences, the appropriate estimator for a paired design.
 
 The Krum result should be read as a tradeoff between single-client selection and federation preservation, not as a universal superiority of Krum: as shown next, its entire advantage is obtained by discarding two of the three clients.
 
@@ -603,16 +603,16 @@ Slow-ramp mimicry is partially detected: the client is first flagged at round 10
 \caption{Adaptive adversary results, single seed. Detection is over post-warm-up attacker submissions; AUROC $\Delta$ is measured against the ten-seed clean asynchronous baseline of $0.9651$ (Table~\ref{tab:main-results}). ``Mean SNAS'' is the attacker's mean score over the same rounds, against $\delta_{\mathrm{flag}}=0.22$ and $\delta_{\mathrm{quarantine}}=0.35$; it shows directly why the alternating attacker evades, its score sitting just below the flag threshold in every decay setting. The alternation attack reveals a robustness boundary of memoryless staleness-normalized scoring.}
 \label{tab:adaptive}
 \centering
-\begin{tabularx}{\textwidth}{@{}lcccc>{\raggedright\arraybackslash}X@{}}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.2cm}cccc>{\raggedright\arraybackslash}X@{}}
 \toprule
-Attack & Detection & First detection & Mean SNAS & AUROC $\Delta$ & Interpretation \\
+Attack & Detection & First det. & Mean SNAS & AUROC $\Delta$ & Interpretation \\
 \midrule
-Threshold-aware scaling & 100\% & Round 2 & 0.347 & $-0.0040$ & Formula-aware scaling fails due to training drift \\
+Threshold-aware scaling & 100\% & Round 2 & 0.347 & $-0.0040$ & Defeated by training drift \\
 Alternating, exponential & 0\% & Never & 0.177 & $-0.0038$ & Structural evasion \\
 Alternating, linear & 0\% & Never & 0.175 & $-0.0037$ & Structural evasion \\
 Alternating, polynomial & 0\% & Never & 0.175 & $-0.0037$ & Structural evasion \\
-Alternating, step & 0\% & Never & 0.175 & $-0.0040$ & Worst damage among decay functions \\
-Slow ramp, 15 rounds & 38.5\% & Round 10 & 0.221 & $-0.0009$ & Partial detection bounds damage \\
+Alternating, step & 0\% & Never & 0.175 & $-0.0040$ & Worst of the four decays \\
+Slow ramp, 15 rounds & 38.5\% & Round 10 & 0.221 & $-0.0009$ & Flagging bounds damage \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -779,7 +779,7 @@ These limitations point directly to future work on windowed and group-split benc
 
 \section{Conclusion}\label{sec:conclusion}
 
-We introduced SENTINEL-SplitFed, a server-side framework for asynchronous split federated learning with intrusion resilience in critical-care mortality prediction. The method combines timed aggregation windows, staleness tracking, staleness-normalized anomaly scoring, norm clipping, and gate-based robust aggregation. On non-IID MIMIC-IV clients, SENTINEL-SplitFed preserves clean asynchronous performance, avoids false quarantine of honest stragglers, and detects the evaluated gradient-scaling, free-rider, label-flip and sparse-corruption attacks in 100\% of post-warm-up attacker submissions (8/8, Wilson 95\% CI $[0.68,1.00]$; 80\% including the warm-up rounds) at 0\% observed false positives (0/16 honest client-rounds, CI $[0.00,0.19]$). Detection, however, is not exclusion: the two direction-driven attacks are flagged in every scored round yet score below the quarantine threshold, so they continue to enter the aggregate at reduced weight. Baseline comparisons reveal that standard robust FL methods require care before they transfer to low-client SplitFed. In the three-client regime Krum collapses federation to a single client and the trimmed mean degenerates to an unweighted average; both are consequences of that regime rather than of the methods, and both resolve once the federation is repartitioned into six clients, where Krum discriminates genuinely and never selects the adversary. That correction cuts both ways, and we report it in both directions: at $N=6$ the trimmed mean also stops being degenerate, gains $0.134$ AUROC on the free-rider attack and overtakes SNAS, so the largest advantage claimed at $N=3$ does not survive a valid configuration and is retracted at $N\geq6$. SNAS's advantage is confined to the setting it was designed for --- a client straggling out of a small federation --- and that setting is evaluated at $N=3$ only. FLTrust is compatible with split-learning encoder aggregation, but only once its reference gradient is derived from the previous round's global encoder and trust is computed over updates rather than absolute weights; without both adaptations it silently degenerates to uniform averaging. Adaptive attacks also reveal a clear robustness boundary, motivating temporal SNAS accumulation. Overall, SENTINEL-SplitFed provides a practical and empirically grounded step toward resilient split federated learning for critical healthcare applications.
+We introduced SENTINEL-SplitFed, a server-side framework for asynchronous split federated learning with intrusion resilience in critical-care mortality prediction. The method combines timed aggregation windows, staleness tracking, staleness-normalized anomaly scoring, norm clipping, and gate-based robust aggregation. On non-IID MIMIC-IV clients, SENTINEL-SplitFed preserves clean asynchronous performance, avoids false quarantine of honest stragglers, and detects the evaluated gradient-scaling, free-rider, label-flip and backdoor attacks in 100\% of post-warm-up attacker submissions (8/8, Wilson 95\% CI $[0.68,1.00]$; 80\% including the warm-up rounds) at 0\% observed false positives (0/16 honest client-rounds, CI $[0.00,0.19]$). Detection, however, is not exclusion: the two direction-driven attacks are flagged in every scored round yet score below the quarantine threshold, so they continue to enter the aggregate at reduced weight. Baseline comparisons reveal that standard robust FL methods require care before they transfer to low-client SplitFed. In the three-client regime Krum collapses federation to a single client and the trimmed mean degenerates to an unweighted average; both are consequences of that regime rather than of the methods, and both resolve once the federation is repartitioned into six clients, where Krum discriminates genuinely and never selects the adversary. That correction cuts both ways, and we report it in both directions: at $N=6$ the trimmed mean also stops being degenerate, gains $0.134$ AUROC on the free-rider attack and overtakes SNAS, so the largest advantage claimed at $N=3$ does not survive a valid configuration and is retracted at $N\geq6$. SNAS's advantage is confined to the setting it was designed for --- a client straggling out of a small federation --- and that setting is evaluated at $N=3$ only. FLTrust is compatible with split-learning encoder aggregation, but only once its reference gradient is derived from the previous round's global encoder and trust is computed over updates rather than absolute weights; without both adaptations it silently degenerates to uniform averaging. Adaptive attacks also reveal a clear robustness boundary, motivating temporal SNAS accumulation. Overall, SENTINEL-SplitFed provides a practical and empirically grounded step toward resilient split federated learning for critical healthcare applications.
 
 \backmatter
 
