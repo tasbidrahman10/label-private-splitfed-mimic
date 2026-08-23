@@ -82,17 +82,56 @@ def _save(fig, name: str) -> None:
 # ---------------------------------------------------------------------------
 # helpers to read per-round AUROC
 # ---------------------------------------------------------------------------
-def _best_seed42_csv(exp_dir: str) -> Path | None:
-    candidates = glob.glob(str(ROOT / "results" / exp_dir / "*seed42*.csv"))
-    best, best_rounds = None, -1
-    for c in candidates:
-        rows = list(csv.DictReader(open(c)))
-        if not rows or "round" not in rows[0]:
-            continue
-        nr = max(int(r["round"]) for r in rows)
-        if nr > best_rounds:
-            best, best_rounds = Path(c), nr
-    return best
+def _last3_mean_auroc(csv_path) -> float:
+    """Mean val_auroc over the last three rounds — the same statistic
+    rerun_p08.mean_auroc_from_csv records into p08_rerun_progress.json."""
+    rows = list(csv.DictReader(open(csv_path)))
+    if not rows or "round" not in rows[0]:
+        return float("nan")
+    last3 = sorted({int(r["round"]) for r in rows})[-3:]
+    vals = [float(r["val_auroc"]) for r in rows
+            if int(r["round"]) in last3 and r.get("val_auroc")]
+    return float(np.mean(vals)) if vals else float("nan")
+
+
+def _best_seed42_csv(exp_dir: str, cell_key: str) -> Path | None:
+    """Select the seed-42 CSV belonging to the current grid run.
+
+    Results directories are cumulative and shared between scripts: the E1
+    directory alone holds 50+ seed-42 CSVs at ten rounds, spanning June
+    (pre-`los`, 266 features) through the current grid, plus the P0-1
+    attack-magnitude sweep, which writes into the same results_dir. Selecting
+    by filename glob, round count, or mtime therefore silently picks a foreign
+    run — a previous version of this helper took the longest run and broke ties
+    by glob order, which resolved to the oldest 266-feature file in every panel.
+
+    Runs are instead reconciled against results/p08_rerun_progress.json, which
+    records the mean AUROC of every grid run: a CSV is accepted only if its own
+    last-three-round mean reproduces the recorded value. This is the same rule
+    used by rerun_p08.py, report_per_client_metrics.py and
+    report_detection_rates.py.
+    """
+    progress = json.load((ROOT / "results" / "p08_rerun_progress.json").open())
+    expected = progress.get(f"snas:{cell_key}", {}).get("42")
+    if expected is None:
+        raise SystemExit(
+            f"make_paper_figures: no grid entry for 'snas:{cell_key}' seed 42 in "
+            "p08_rerun_progress.json — refusing to guess which run to plot."
+        )
+
+    matches = [
+        Path(c) for c in glob.glob(str(ROOT / "results" / exp_dir / "*seed42*.csv"))
+        if abs(_last3_mean_auroc(c) - expected) < 1e-9
+    ]
+    if not matches:
+        raise SystemExit(
+            f"make_paper_figures: no CSV in results/{exp_dir} reproduces the "
+            f"recorded AUROC {expected:.9f} for 'snas:{cell_key}' seed 42. "
+            "Re-run the grid or check the results directory."
+        )
+    # Deterministic repeats of the same configuration are byte-identical in the
+    # plotted quantity; take the newest, matching rerun_p08's own convention.
+    return max(matches, key=lambda p: p.stat().st_mtime)
 
 
 def _mean_auroc_per_round(csv_path: Path) -> tuple[list[int], list[float]]:
@@ -110,8 +149,8 @@ def _mean_auroc_per_round(csv_path: Path) -> tuple[list[int], list[float]]:
 # ---------------------------------------------------------------------------
 def fig_perround_auroc() -> None:
     fig, ax = plt.subplots(figsize=(7.0, 4.8))
-    for label, exp_dir, _key, color, marker in EXP:
-        csv_path = _best_seed42_csv(exp_dir)
+    for label, exp_dir, cell_key, color, marker in EXP:
+        csv_path = _best_seed42_csv(exp_dir, cell_key)
         if csv_path is None:
             continue
         rounds, means = _mean_auroc_per_round(csv_path)
