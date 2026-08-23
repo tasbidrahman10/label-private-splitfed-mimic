@@ -1,0 +1,31 @@
+{
+  "source_log": "results/label_private_splitfed/server/server_metrics_nihal_p08(1).jsonl",
+  "experiment": "E1_gradient_scaling",
+  "n_clients": 6,
+  "attacker_client": 1,
+  "seeds": [
+    42,
+    7,
+    123,
+    2024,
+    31415
+  ],
+  "total_selection_records_in_log": 52,
+  "smoke_test_records_excluded": 2,
+  "split_gap_seconds": 2156.5,
+  "grid_window": {
+    "start": "2026-08-23T00:51:45",
+    "end": "2026-08-23T01:21:13"
+  },
+  "grid_selection_decisions": 50,
+  "distinct_clients_selected": 4,
+  "attacker_ever_selected": false,
+  "per_client": {
+    "0": 1,
+    "1": 0,
+    "2": 5,
+    "3": 18,
+    "4": 26,
+    "5": 0
+  }
+}
