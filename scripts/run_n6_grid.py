@@ -62,18 +62,47 @@ EXPECTED_CLIENTS = 6
 PROGRESS_PATH = ROOT / "results" / "n6_grid_progress.json"
 SUMMARY_PATH = ROOT / "results" / "n6_grid_summary.json"
 
-EXPERIMENT = "E1_gradient_scaling"
-
-# aggregator -> experiment config. Each config carries its own results_dir;
+# experiment -> {aggregator -> config}. Each config carries its own results_dir;
 # verified distinct, because four adaptive-attack configs previously shared one
 # and silently overwrote each other.
-GRID: dict[str, str] = {
-    "snas":         "configs/experiment_e1_gradient_scaling_n6.yaml",
-    "krum":         "configs/experiment_baseline_krum_e1_gradient_scaling_n6.yaml",
-    "trimmed_mean": "configs/experiment_baseline_trimmed_mean_e1_gradient_scaling_n6.yaml",
-    "median":       "configs/experiment_baseline_median_e1_gradient_scaling_n6.yaml",
-    "fltrust":      "configs/experiment_baseline_fltrust_e1_gradient_scaling_n6.yaml",
+#
+# E1 is a pure magnitude attack, which norm clipping, order statistics and
+# reference-gradient weighting all address by construction -- it is the attack
+# least able to separate correctly-configured defenses, and at n=6 all five
+# aggregators land within 0.003 AUROC. E2 is where SNAS's separation actually
+# arises at n=3 (+0.085 over trimmed mean, +0.033 over FLTrust), so running it
+# at n=6 is what puts that separation on a validly-configured Krum and trimmed
+# mean. "clean" supplies the n=6 reference for the AUROC delta column.
+EXPERIMENTS: dict[str, dict[str, str]] = {
+    "E1_gradient_scaling": {
+        "snas":         "configs/experiment_e1_gradient_scaling_n6.yaml",
+        "krum":         "configs/experiment_baseline_krum_e1_gradient_scaling_n6.yaml",
+        "trimmed_mean": "configs/experiment_baseline_trimmed_mean_e1_gradient_scaling_n6.yaml",
+        "median":       "configs/experiment_baseline_median_e1_gradient_scaling_n6.yaml",
+        "fltrust":      "configs/experiment_baseline_fltrust_e1_gradient_scaling_n6.yaml",
+    },
+    "E2_free_rider": {
+        "snas":         "configs/experiment_e2_free_rider_n6.yaml",
+        "krum":         "configs/experiment_baseline_krum_e2_free_rider_n6.yaml",
+        "trimmed_mean": "configs/experiment_baseline_trimmed_mean_e2_free_rider_n6.yaml",
+        "median":       "configs/experiment_baseline_median_e2_free_rider_n6.yaml",
+        "fltrust":      "configs/experiment_baseline_fltrust_e2_free_rider_n6.yaml",
+    },
+    "clean": {
+        "snas":         "configs/experiment_async_clean_n6.yaml",
+    },
 }
+
+DEFAULT_EXPERIMENT = "E1_gradient_scaling"
+
+# Rebound by main() from --experiment. Module-level because the reporting
+# helpers below read them directly.
+EXPERIMENT = DEFAULT_EXPERIMENT
+GRID: dict[str, str] = EXPERIMENTS[DEFAULT_EXPERIMENT]
+
+# Measured on the 25-run E1 grid: ~6 min/run, not the 13 min/run
+# N6_MIGRATION.md estimated. Used only for ETAs.
+MINUTES_PER_RUN = 6
 
 # /admin/reset MERGES overrides into the live config: a value left unset persists
 # from whichever run set it last. Every gate and clip parameter is therefore
@@ -224,14 +253,26 @@ def run_one(config_path: str, aggregator: str, seed: int) -> float:
 # --- reporting ---------------------------------------------------------------
 
 def write_summary(progress: dict) -> None:
+    """Summarise every cell in the progress file, not just the active experiment.
+
+    The summary is rewritten wholesale on each run, so deriving it from the
+    active GRID/EXPERIMENT would drop the other experiments' cells -- running
+    E2 would silently wipe the E1 summary that Table 7 is built from. Keys come
+    from `progress` instead, which is append-only across experiments.
+    """
+    # Ordered by the EXPERIMENTS registry rather than alphabetically, so the
+    # file stays readable and a rerun does not reshuffle it into a noisy diff.
+    ordered = [f"{agg}:{exp}" for exp, aggs in EXPERIMENTS.items() for agg in aggs]
+    keys = [k for k in ordered if k in progress]
+    keys += [k for k in progress if k not in ordered]
+
     summary: dict = {}
-    for agg in GRID:
-        cell = progress.get(f"{agg}:{EXPERIMENT}", {})
-        ok = {s: v for s, v in cell.items() if v is not None}
+    for key in keys:
+        ok = {s: v for s, v in progress[key].items() if v is not None}
         if not ok:
             continue
         vals = list(ok.values())
-        summary[f"{agg}:{EXPERIMENT}"] = {
+        summary[key] = {
             "n_seeds": len(vals),
             "mean_auroc": round(float(np.mean(vals)), 6),
             "std_auroc": round(float(np.std(vals)), 6),
@@ -241,6 +282,7 @@ def write_summary(progress: dict) -> None:
 
 
 def print_status(progress: dict) -> bool:
+    print(f"experiment: {EXPERIMENT}")
     print(f"{'aggregator':<16}{'seeds':>9}{'mean':>10}{'std':>10}")
     print("-" * 45)
     total_done = 0
@@ -259,7 +301,8 @@ def print_status(progress: dict) -> bool:
     if total_done < total:
         left = total - total_done
         print(f"Not finished. ~{left} runs left "
-              f"(~{timedelta(seconds=int(left * 13 * 60))} at 13 min/run).")
+              f"(~{timedelta(seconds=int(left * MINUTES_PER_RUN * 60))} "
+              f"at {MINUTES_PER_RUN} min/run).")
         return False
     print("\nFINISHED — every cell complete.")
     return True
@@ -268,12 +311,23 @@ def print_status(progress: dict) -> bool:
 # --- main --------------------------------------------------------------------
 
 def main() -> None:
+    global EXPERIMENT, GRID
+
     ap = argparse.ArgumentParser(description="n=6 supplementary grid (P2).")
-    ap.add_argument("--only", choices=sorted(GRID), help="Run only this aggregator.")
+    ap.add_argument("--experiment", choices=sorted(EXPERIMENTS),
+                    default=DEFAULT_EXPERIMENT,
+                    help=f"Which n=6 experiment to run (default: {DEFAULT_EXPERIMENT}).")
+    ap.add_argument("--only", help="Run only this aggregator.")
     ap.add_argument("--seeds", type=int, nargs="+", help="Restrict to these seeds.")
     ap.add_argument("--dry-run", action="store_true", help="List pending work, then exit.")
     ap.add_argument("--status", action="store_true", help="Read-only progress report.")
     args = ap.parse_args()
+
+    EXPERIMENT = args.experiment
+    GRID = EXPERIMENTS[EXPERIMENT]
+    if args.only and args.only not in GRID:
+        ap.error(f"--only {args.only!r} is not an aggregator of {EXPERIMENT}; "
+                 f"choose from {', '.join(sorted(GRID))}")
 
     progress = load_progress()
 
@@ -298,7 +352,8 @@ def main() -> None:
         return
 
     print(f"{len(todo)} run(s) pending "
-          f"(~{timedelta(seconds=int(len(todo) * 13 * 60))} at 13 min/run).")
+          f"(~{timedelta(seconds=int(len(todo) * MINUTES_PER_RUN * 60))} "
+          f"at {MINUTES_PER_RUN} min/run).")
     if args.dry_run:
         for agg, _, seed in todo:
             print(f"  {agg}:{EXPERIMENT} seed={seed}")
